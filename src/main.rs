@@ -82,25 +82,22 @@ async fn handle_event(
         Event::VoiceStateUpdate(vsu) => {
             println!("vsu: {:?}", vsu);
         }
-        Event::InteractionCreate(interaction) => {
-            println!("interaction: {:?}", interaction);
-            match interaction.0 {
-                Interaction::ApplicationCommand(cmd) => {
-                    http.interaction_callback(
-                        cmd.id,
-                        &cmd.token,
-                        &InteractionResponse::ChannelMessageWithSource(
-                            CallbackDataBuilder::new()
-                                .content("foo bar baz".into())
-                                .build(),
-                        ),
-                    )
-                    .exec()
-                    .await?;
-                }
-                _ => {}
+        Event::InteractionCreate(interaction) => match interaction.0 {
+            Interaction::ApplicationCommand(cmd) => {
+                http.interaction_callback(
+                    cmd.id,
+                    &cmd.token,
+                    &InteractionResponse::ChannelMessageWithSource(
+                        CallbackDataBuilder::new()
+                            .content("foo bar baz".into())
+                            .build(),
+                    ),
+                )
+                .exec()
+                .await?;
             }
-        }
+            _ => {}
+        },
         // Other events here...
         _ => {}
     }
