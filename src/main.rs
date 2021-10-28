@@ -13,6 +13,8 @@ use twilight_model::{
 };
 use twilight_util::builder::CallbackDataBuilder;
 
+pub type TwHttpClient = Arc<HttpClient>;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     // Load the .env file and just ignore any errors
