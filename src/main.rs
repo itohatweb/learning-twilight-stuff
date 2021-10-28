@@ -1,3 +1,4 @@
+use dotenv::dotenv;
 use futures::stream::StreamExt;
 use std::{env, error::Error, sync::Arc};
 use twilight_cache_inmemory::{InMemoryCache, ResourceType};
@@ -14,6 +15,9 @@ use twilight_util::builder::CallbackDataBuilder;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
+    // Load the .env file and just ignore any errors
+    dotenv().ok();
+
     let token = env::var("DISCORD_TOKEN")?;
 
     // This is the default scheme. It will automatically create as many
