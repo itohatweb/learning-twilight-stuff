@@ -1,3 +1,4 @@
+use bot_test::{commands::exec_command, types::TwHttpClient};
 use dotenv::dotenv;
 use futures::stream::StreamExt;
 use std::{env, error::Error, sync::Arc};
@@ -7,18 +8,18 @@ use twilight_gateway::{
     Event,
 };
 use twilight_http::Client as HttpClient;
-use twilight_model::{
-    application::{callback::InteractionResponse, interaction::Interaction},
-    gateway::Intents,
-};
-use twilight_util::builder::CallbackDataBuilder;
+use twilight_model::{application::interaction::Interaction, gateway::Intents};
 
-pub type TwHttpClient = Arc<HttpClient>;
+#[macro_use]
+extern crate log;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     // Load the .env file and just ignore any errors
     dotenv().ok();
+    env_logger::init();
+
+    info!("Starting up");
 
     let token = env::var("DISCORD_TOKEN")?;
 
@@ -67,7 +68,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 async fn handle_event(
     shard_id: u64,
     event: Event,
-    http: Arc<HttpClient>,
+    http: TwHttpClient,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     match event {
         Event::MessageCreate(msg) if msg.content == "!ping" => {
@@ -85,18 +86,8 @@ async fn handle_event(
             println!("vsu: {:?}", vsu);
         }
         Event::InteractionCreate(interaction) => {
-            if let Interaction::ApplicationCommand(cmd) = interaction.0 {
-                http.interaction_callback(
-                    cmd.id,
-                    &cmd.token,
-                    &InteractionResponse::ChannelMessageWithSource(
-                        CallbackDataBuilder::new()
-                            .content("foo bar baz".into())
-                            .build(),
-                    ),
-                )
-                .exec()
-                .await?;
+            if let Interaction::ApplicationCommand(command) = interaction.0 {
+                exec_command(http, &command).await?;
             }
         }
         // Other events here...
