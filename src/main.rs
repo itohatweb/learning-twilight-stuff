@@ -82,8 +82,8 @@ async fn handle_event(
         Event::VoiceStateUpdate(vsu) => {
             println!("vsu: {:?}", vsu);
         }
-        Event::InteractionCreate(interaction) => match interaction.0 {
-            Interaction::ApplicationCommand(cmd) => {
+        Event::InteractionCreate(interaction) => {
+            if let Interaction::ApplicationCommand(cmd) = interaction.0 {
                 http.interaction_callback(
                     cmd.id,
                     &cmd.token,
@@ -96,8 +96,7 @@ async fn handle_event(
                 .exec()
                 .await?;
             }
-            _ => {}
-        },
+        }
         // Other events here...
         _ => {}
     }
