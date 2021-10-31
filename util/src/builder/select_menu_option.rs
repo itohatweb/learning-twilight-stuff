@@ -1,6 +1,5 @@
 use twilight_model::{
-    application::component::{select_menu::SelectMenuOption, SelectMenu},
-    channel::ReactionType,
+    application::component::select_menu::SelectMenuOption, channel::ReactionType,
 };
 
 pub const MAX_SELECT_MENU_OPTION_LEN: usize = 25;

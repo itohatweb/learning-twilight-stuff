@@ -1,8 +1,7 @@
 use anyhow::Result;
 use twilight_model::{
     application::{
-        callback::InteractionResponse,
-        component::{button::ButtonStyle, select_menu::SelectMenuOption},
+        callback::InteractionResponse, component::button::ButtonStyle,
         interaction::ApplicationCommand,
     },
     channel::ReactionType,
