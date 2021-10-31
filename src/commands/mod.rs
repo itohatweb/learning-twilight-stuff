@@ -3,7 +3,7 @@ use anyhow::Result;
 use log::error;
 use twilight_model::application::interaction::ApplicationCommand;
 
-use crate::types::{RCache, TwHttpClient};
+use crate::types::{Acache, TwHttpClient};
 
 // Make every command a mod
 pub mod invite;
@@ -18,7 +18,7 @@ pub enum ExecCommandError {
 pub async fn exec_command(
     http: TwHttpClient,
     command: &ApplicationCommand,
-    cache: RCache,
+    cache: Acache,
 ) -> Result<()> {
     let res: Result<(), anyhow::Error> = match command.data.name.as_str() {
         "ping" => ping::execute(http, command, cache).await,

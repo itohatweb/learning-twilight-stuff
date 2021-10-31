@@ -1,6 +1,6 @@
 use bot_test::{
     commands::exec_command,
-    types::{RCache, TwHttpClient},
+    types::{Acache, TwHttpClient},
 };
 use dotenv::dotenv;
 use futures::stream::StreamExt;
@@ -70,13 +70,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     // Since we only care about new messages, make the cache only
     // cache new messages.
-    let cache: RCache = std::sync::Arc::new(RwLock::new(
-        InMemoryCache::builder()
-            .resource_types(ResourceType::all())
-            .build(),
-    ));
-
-    let new_cache = Arc::new(
+    let cache = Arc::new(
         InMemoryCache::builder()
             .resource_types(ResourceType::all())
             .build(),
@@ -85,13 +79,13 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     // Process each event as they come in.
     while let Some((shard_id, event)) = events.next().await {
         // Update the cache with the event.
-        new_cache.update(&event);
+        cache.update(&event);
 
         tokio::spawn(handle_event(
             shard_id,
             event,
             Arc::clone(&http),
-            new_cache.clone(),
+            cache.clone(),
         ));
     }
 

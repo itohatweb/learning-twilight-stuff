@@ -6,12 +6,12 @@ use twilight_model::{
 use twilight_util::builder::CallbackDataBuilder;
 use twilight_util::snowflake::Snowflake;
 
-use crate::types::{RCache, TwHttpClient};
+use crate::types::{Acache, TwHttpClient};
 
 pub async fn execute(
     http: TwHttpClient,
     command: &ApplicationCommand,
-    cache: RCache,
+    cache: Acache,
 ) -> Result<()> {
     // if command.user.as_ref().unwrap().id.0 != UserId::new(615542460151496705_u64).unwrap().0 {
     //     return Ok(());
@@ -19,7 +19,7 @@ pub async fn execute(
 
     let ping_time = chrono::Utc::now().timestamp_millis() - command.id.timestamp();
 
-    let guild_count = cache.read().iter().guilds().count();
+    let guild_count = cache.iter().guilds().count();
 
     http.interaction_callback(
         command.id,
