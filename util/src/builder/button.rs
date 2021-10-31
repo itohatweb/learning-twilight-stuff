@@ -29,8 +29,6 @@ impl ButtonBuilder {
             self.0.custom_id = None;
         }
 
-        println!("{:#?}", self.0);
-
         self.0
     }
 
