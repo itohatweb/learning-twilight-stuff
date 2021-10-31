@@ -2,14 +2,14 @@ use anyhow::Result;
 use twilight_model::{
     application::{
         callback::InteractionResponse,
-        component::{button::ButtonStyle, select_menu::SelectMenuOption, SelectMenu},
+        component::{button::ButtonStyle, select_menu::SelectMenuOption},
         interaction::ApplicationCommand,
     },
     channel::ReactionType,
     id::EmojiId,
 };
 use twilight_util::builder::CallbackDataBuilder;
-use util::builder::{ButtonBuilder, ComponentBuilder, SelectMenuBuilder};
+use util::builder::{ButtonBuilder, ComponentBuilder, SelectMenuBuilder, SelectMenuOptionBuilder};
 
 use crate::types::TwHttpClient;
 
@@ -57,29 +57,17 @@ pub async fn execute(http: TwHttpClient, command: &ApplicationCommand) -> Result
         )
         .select_menu(
             SelectMenuBuilder::new("testing menu".into())
-                .max_values(Some(0))
                 .add_options(vec![
-                    SelectMenuOption {
-                        label: "test option label".into(),
-                        value: "test option value".into(),
-                        description: Some("test description".into()),
-                        emoji: None,
-                        default: false,
-                    },
-                    SelectMenuOption {
-                        label: "test option label2".into(),
-                        value: "test option value2".into(),
-                        description: Some("test description2".into()),
-                        emoji: None,
-                        default: false,
-                    },
-                    SelectMenuOption {
-                        label: "test option label3".into(),
-                        value: "test option value3".into(),
-                        description: Some("test description3".into()),
-                        emoji: None,
-                        default: false,
-                    },
+                    SelectMenuOptionBuilder::new("Lab 1".into(), "lab-1".into())
+                        .description(Some("optional description".into()))
+                        .build(),
+                    SelectMenuOptionBuilder::new("Lab 2".into(), "lab-2".into())
+                        .emoji(ReactionType::Custom {
+                            animated: true,
+                            id: EmojiId::new(798140081713184798_u64).unwrap(),
+                            name: Some("KEK".into()),
+                        })
+                        .build(),
                 ])
                 .build(),
         )
