@@ -153,7 +153,7 @@ async fn handle_event(
                 .embeds(&[embed])?
                 .exec()
                 .await?;
-            // println!("---- Message event: {:?}", msg);
+            println!("---- Message event: {:#?}", cache.user(msg.author.id));
         }
         Event::ShardConnected(_) => {
             println!("Connected on shard {}", shard_id);

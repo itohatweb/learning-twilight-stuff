@@ -1,0 +1,39 @@
+[package]
+name = "bot-test"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# TWILIGHT
+twilight-cache-inmemory = "0.7.0"
+twilight-gateway = "0.7.0"
+twilight-http = "0.7.0"
+twilight-model = "0.7.0"
+twilight-util = { version = "0.7.0", features = ["builder", "snowflake"] }
+twilight-embed-builder = "0.7.1"
+
+# Others
+futures = "0.3.17"
+tokio = { version = "1.12.0", features = ["full"] }
+
+# Nice config stuff
+dotenv = "0.15.0"
+
+# Cool crate for lazy ppl like me
+anyhow = "1.0.43"
+thiserror = "1.0.30"
+
+# Logging stuff
+log = "0.4.14"
+env_logger = "0.9.0"
+
+# Thread savety, will become important later when we utelize zem
+parking_lot = "0.11.2"
+
+# TIIIME
+chrono = { version = "0.4" } #features = ["serde"] }
+
+simple-process-stats = "1.0.0"
+# sysinfo = "0.20.5"
