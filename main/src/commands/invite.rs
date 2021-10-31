@@ -70,6 +70,11 @@ pub async fn execute(http: TwHttpClient, command: &ApplicationCommand) -> Result
                 ])
                 .build(),
         )
+        .button(
+            ButtonBuilder::new(ButtonStyle::Success, "idk what this is".into())
+                .label("baz".into())
+                .build(),
+        )
         // .select_menu(SelectMenu {
         //     custom_id: "test custom id 2asdfasdf".into(),
         //     disabled: false,

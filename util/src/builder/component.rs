@@ -27,8 +27,16 @@ impl ComponentBuilder {
 
         match component {
             // Check if the ActionRow still has place and then add the button
-            Some(Component::ActionRow(action_row)) if action_row.components.len() < 5 => {
+            Some(Component::ActionRow(action_row))
+                if action_row.components.len() < 5
+                // Currently only buttons are allowed to be in the same ActionRow
+                    && action_row.components.iter().all(|c| match c {
+                        Component::Button(_) => true,
+                        _ => false,
+                    }) =>
+            {
                 action_row.components.push(Component::Button(button));
+
                 self
             }
             // No ActionRow found or its full so create a new one
