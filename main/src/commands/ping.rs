@@ -1,8 +1,5 @@
 use anyhow::Result;
-use twilight_model::{
-    application::{callback::InteractionResponse, interaction::ApplicationCommand},
-    id::UserId,
-};
+use twilight_model::application::{callback::InteractionResponse, interaction::ApplicationCommand};
 use twilight_util::builder::CallbackDataBuilder;
 use twilight_util::snowflake::Snowflake;
 

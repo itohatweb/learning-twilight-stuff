@@ -29,12 +29,13 @@ impl ComponentBuilder {
 
     pub fn button(mut self, button: Button) -> Self {
         // Get the last ActionRow
-        let component = self.0.iter_mut().rev().find(|component| match component {
-            Component::ActionRow(_) => true,
-            _ => false,
-        });
+        let component = self
+            .0
+            .iter_mut()
+            .rev()
+            .find(|component| matches!(component, Component::ActionRow(_)));
 
-        return match component {
+        match component {
             // Check if the ActionRow still has place and then add the button
             Some(Component::ActionRow(action_row)) if action_row.components.len() < 5 => {
                 action_row.components.push(Component::Button(button));
@@ -42,7 +43,7 @@ impl ComponentBuilder {
             }
             // No ActionRow found or its full so create a new one
             _ => self.action_row(vec![Component::Button(button)]),
-        };
+        }
     }
 
     pub fn select_menu(self, select_menu: SelectMenu) -> Self {
@@ -172,7 +173,7 @@ pub async fn execute(http: TwHttpClient, command: &ApplicationCommand) -> Result
         })
         .build();
 
-    let f = http
+    let _f = http
         .interaction_callback(
             command.id,
             &command.token,

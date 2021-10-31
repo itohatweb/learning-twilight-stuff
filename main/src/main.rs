@@ -1,11 +1,7 @@
-use bot_test::{
-    commands::exec_command,
-    types::{Acache, TwHttpClient},
-};
+use bot_test::{commands::exec_command, types::TwHttpClient};
 use dotenv::dotenv;
 use futures::stream::StreamExt;
-use parking_lot::RwLock;
-use std::{borrow::BorrowMut, env, error::Error, sync::Arc};
+use std::{env, error::Error, sync::Arc};
 use twilight_cache_inmemory::{InMemoryCache, ResourceType};
 use twilight_embed_builder::{EmbedBuilder, EmbedFieldBuilder};
 use twilight_gateway::{
@@ -13,9 +9,7 @@ use twilight_gateway::{
     Event,
 };
 use twilight_http::Client as HttpClient;
-use twilight_model::{
-    application::interaction::Interaction, channel::Channel, gateway::Intents, id::UserId,
-};
+use twilight_model::{application::interaction::Interaction, gateway::Intents, id::UserId};
 
 use simple_process_stats::ProcessStats;
 
@@ -158,12 +152,12 @@ async fn handle_event(
         Event::ShardConnected(_) => {
             println!("Connected on shard {}", shard_id);
         }
-        Event::VoiceStateUpdate(vsu) => {
+        Event::VoiceStateUpdate(_vsu) => {
             // println!("vsu: {:?}", vsu);
         }
         Event::InteractionCreate(interaction) => {
             if let Interaction::ApplicationCommand(command) = interaction.0 {
-                // exec_command(http, &command, cache).await?;
+                exec_command(http, &command, cache).await?;
             }
         }
         // Other events here...
