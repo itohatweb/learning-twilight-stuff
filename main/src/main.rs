@@ -172,26 +172,3 @@ async fn handle_event(
 
     Ok(())
 }
-
-pub mod cache_inmemory {
-    use std::{ops::Deref, sync::Arc};
-
-    pub use twilight_cache_inmemory::*;
-
-    #[derive(Clone)]
-    pub struct CloneableInMemoryCache(pub Arc<InMemoryCache>);
-
-    impl CloneableInMemoryCache {
-        pub fn new(cache: InMemoryCache) -> Self {
-            Self(Arc::new(cache))
-        }
-    }
-
-    impl Deref for CloneableInMemoryCache {
-        type Target = InMemoryCache;
-
-        fn deref(&self) -> &Self::Target {
-            &self.0
-        }
-    }
-}
