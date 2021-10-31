@@ -2,14 +2,14 @@ use anyhow::Result;
 use twilight_model::{
     application::{
         callback::InteractionResponse,
-        component::{button::ButtonStyle, select_menu::SelectMenuOption, Button, SelectMenu},
+        component::{button::ButtonStyle, select_menu::SelectMenuOption, SelectMenu},
         interaction::ApplicationCommand,
     },
     channel::ReactionType,
     id::EmojiId,
 };
 use twilight_util::builder::CallbackDataBuilder;
-use util::builder::{ButtonBuilder, ComponentBuilder};
+use util::builder::{ButtonBuilder, ComponentBuilder, SelectMenuBuilder};
 
 use crate::types::TwHttpClient;
 
@@ -55,100 +55,64 @@ pub async fn execute(http: TwHttpClient, command: &ApplicationCommand) -> Result
                 .disabled(true)
                 .build(),
         )
-        .button(Button {
-            style: ButtonStyle::Primary,
-            emoji: None,
-            label: Some("oh yea it works".into()),
-            custom_id: Some("test custom id".into()),
-            url: None,
-            disabled: false,
-        })
-        .button(Button {
-            style: ButtonStyle::Danger,
-            emoji: None,
-            label: Some("oh yea it works".into()),
-            custom_id: Some("test custom id1".into()),
-            url: None,
-            disabled: false,
-        })
-        .button(Button {
-            style: ButtonStyle::Danger,
-            emoji: None,
-            label: Some("oh yea it works".into()),
-            custom_id: Some("test custom id2".into()),
-            url: None,
-            disabled: false,
-        })
-        .button(Button {
-            style: ButtonStyle::Danger,
-            emoji: None,
-            label: Some("oh yea it works".into()),
-            custom_id: Some("test custom id3".into()),
-            url: None,
-            disabled: false,
-        })
-        .button(Button {
-            style: ButtonStyle::Danger,
-            emoji: None,
-            label: Some("oh yea it works".into()),
-            custom_id: Some("test custom id34".into()),
-            url: None,
-            disabled: false,
-        })
-        .button(Button {
-            style: ButtonStyle::Danger,
-            emoji: None,
-            label: Some("oh yea it works".into()),
-            custom_id: Some("test custom id53".into()),
-            url: None,
-            disabled: false,
-        })
-        .button(Button {
-            style: ButtonStyle::Danger,
-            emoji: None,
-            label: Some("oh yea it works".into()),
-            custom_id: Some("test custom id36".into()),
-            url: None,
-            disabled: false,
-        })
-        .button(Button {
-            style: ButtonStyle::Danger,
-            emoji: None,
-            label: Some("oh yea it works".into()),
-            custom_id: Some("test custom id37".into()),
-            url: None,
-            disabled: false,
-        })
-        .select_menu(SelectMenu {
-            custom_id: "test custom id 2asdfasdf".into(),
-            disabled: false,
-            placeholder: Some("adsfasdfaf".into()),
-            min_values: None,
-            max_values: None,
-            options: vec![
-                SelectMenuOption {
-                    label: "test option label".into(),
-                    value: "test option value".into(),
-                    description: Some("test description".into()),
-                    emoji: None,
-                    default: false,
-                },
-                SelectMenuOption {
-                    label: "test option label2".into(),
-                    value: "test option value2".into(),
-                    description: Some("test description2".into()),
-                    emoji: None,
-                    default: false,
-                },
-                SelectMenuOption {
-                    label: "test option label3".into(),
-                    value: "test option value3".into(),
-                    description: Some("test description3".into()),
-                    emoji: None,
-                    default: false,
-                },
-            ],
-        })
+        .select_menu(
+            SelectMenuBuilder::new("testing menu".into())
+                .max_values(Some(0))
+                .add_options(vec![
+                    SelectMenuOption {
+                        label: "test option label".into(),
+                        value: "test option value".into(),
+                        description: Some("test description".into()),
+                        emoji: None,
+                        default: false,
+                    },
+                    SelectMenuOption {
+                        label: "test option label2".into(),
+                        value: "test option value2".into(),
+                        description: Some("test description2".into()),
+                        emoji: None,
+                        default: false,
+                    },
+                    SelectMenuOption {
+                        label: "test option label3".into(),
+                        value: "test option value3".into(),
+                        description: Some("test description3".into()),
+                        emoji: None,
+                        default: false,
+                    },
+                ])
+                .build(),
+        )
+        // .select_menu(SelectMenu {
+        //     custom_id: "test custom id 2asdfasdf".into(),
+        //     disabled: false,
+        //     placeholder: Some("adsfasdfaf".into()),
+        //     min_values: None,
+        //     max_values: None,
+        //     options: vec![
+        //         SelectMenuOption {
+        //             label: "test option label".into(),
+        //             value: "test option value".into(),
+        //             description: Some("test description".into()),
+        //             emoji: None,
+        //             default: false,
+        //         },
+        //         SelectMenuOption {
+        //             label: "test option label2".into(),
+        //             value: "test option value2".into(),
+        //             description: Some("test description2".into()),
+        //             emoji: None,
+        //             default: false,
+        //         },
+        //         SelectMenuOption {
+        //             label: "test option label3".into(),
+        //             value: "test option value3".into(),
+        //             description: Some("test description3".into()),
+        //             emoji: None,
+        //             default: false,
+        //         },
+        //     ],
+        // })
         .build();
 
     let _f = http
