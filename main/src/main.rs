@@ -1,6 +1,8 @@
 use bot_test::{commands::exec_command, types::TwHttpClient};
 use dotenv::dotenv;
 use futures::stream::StreamExt;
+use redis::{aio::Connection, AsyncCommands};
+use simple_process_stats::ProcessStats;
 use std::{env, error::Error, sync::Arc};
 use twilight_cache_inmemory::{InMemoryCache, ResourceType};
 use twilight_embed_builder::{EmbedBuilder, EmbedFieldBuilder};
@@ -9,9 +11,9 @@ use twilight_gateway::{
     Event,
 };
 use twilight_http::Client as HttpClient;
-use twilight_model::{application::interaction::Interaction, gateway::Intents, id::UserId};
-
-use simple_process_stats::ProcessStats;
+use twilight_model::{
+    application::interaction::Interaction, channel::GuildChannel, gateway::Intents, id::UserId,
+};
 
 // TODO: look at this cool thing when its finished https://github.com/baptiste0928/twilight-interactions
 
@@ -25,6 +27,14 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     env_logger::init();
 
     info!("Starting up");
+
+    debug!("Connecting to Redis server");
+    let client = redis::Client::open("redis://127.0.0.1/").unwrap();
+    let mut con = client.get_async_connection().await?;
+    debug!("Flushing Redis cache");
+    redis::cmd("FLUSHALL")
+        .query_async::<Connection, ()>(&mut con)
+        .await?;
 
     let token = env::var("DISCORD_TOKEN")?;
 
@@ -122,32 +132,53 @@ async fn handle_event(
                 .expect("could not get stats for running process");
             println!("flop {:#?}", process_stats);
 
-            let embed = EmbedBuilder::new()
-                .description("Current statistics of the bot:")
-                .field(EmbedFieldBuilder::new(
-                    "Cached Stuff:",
-                    format!(
+            let client = redis::Client::open("redis://127.0.0.1/").unwrap();
+            let mut con = client.get_async_connection().await?;
+
+            let redis_guilds: u64 = con.hlen("guilds").await?;
+            let redis_channels: u64 = con.hlen("channels").await?;
+
+            let embed =
+                EmbedBuilder::new()
+                    .description("Current statistics of the bot:")
+                    .field(
+                        EmbedFieldBuilder::new(
+                            "Cached Stuff:",
+                            format!(
                         "guilds: {}\nchannels: {}\nmessages: {}\nmembers: {}\nvoice states: {}",
                         guild_count, channel_count, message_count, member_count, voice_states_count
                     ),
-                ))
-                .field(
-                    EmbedFieldBuilder::new(
-                        "Memory usage:",
-                        format!(
-                            "{} MB",
-                            process_stats.memory_usage_bytes as f64 / 1_000_000.0
-                        ),
+                        )
+                        .inline(),
                     )
-                    .inline(),
-                )
-                .build()?;
+                    .field(
+                        EmbedFieldBuilder::new(
+                            "Redis cache:",
+                            format!("guilds: {}\nchannels: {}", redis_guilds, redis_channels),
+                        )
+                        .inline(),
+                    )
+                    .field(EmbedFieldBuilder::new("\u{200B}", "\u{200B}").inline())
+                    .field(
+                        EmbedFieldBuilder::new(
+                            "Memory usage:",
+                            format!(
+                                "{} MB",
+                                process_stats.memory_usage_bytes as f64 / 1_000_000.0
+                            ),
+                        )
+                        .inline(),
+                    )
+                    .build()?;
 
             http.create_message(msg.channel_id)
                 .embeds(&[embed])?
                 .exec()
                 .await?;
-            println!("---- Message event: {:#?}", cache.user(msg.author.id));
+            println!(
+                "---- Message event: {:?}",
+                serde_json::to_string(&cache.guild(msg.guild_id.unwrap()).as_deref())
+            );
         }
         Event::ShardConnected(_) => {
             println!("Connected on shard {}", shard_id);
@@ -159,6 +190,30 @@ async fn handle_event(
             if let Interaction::ApplicationCommand(command) = interaction.0 {
                 exec_command(http, &command, cache).await?;
             }
+        }
+        Event::GuildCreate(guild) => {
+            let client = redis::Client::open("redis://127.0.0.1/").unwrap();
+            let mut con = client.get_async_connection().await?;
+
+            let bytes = bincode::serialize(&guild).unwrap();
+
+            // con.set("key1", bytes).await?;
+            con.hset("guilds", guild.id.0, bytes).await?;
+
+            // for c in guild.channels.iter() {
+            //     let bin = bincode::serialize(&c).unwrap();
+            //     con.hset("channels", c.id().0, bin).await?;
+            // }
+
+            let items: Vec<(u64, Vec<u8>)> = guild
+                .channels
+                .iter()
+                .map(|c| (c.id().0.into(), bincode::serialize(&c).unwrap()))
+                .collect();
+
+            con.hset_multiple("channels", &items).await?;
+
+            // println!("{:?}", guild.channels);
         }
         // Other events here...
         _ => {}
