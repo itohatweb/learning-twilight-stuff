@@ -15,3 +15,5 @@ async-trait = "0.1.51"
 thiserror = "1.0.30"
 deadpool-redis = "0.10.0"
 rmp-serde = "0.15.5"
+
+bitflags = { default-features = false, version = "1" }

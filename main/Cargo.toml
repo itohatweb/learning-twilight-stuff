@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 # OWN
 util = { path = "../util" }
+cache = { path = "../cache" }
 
 # TWILIGHT
 twilight-cache-inmemory = "0.7.0"

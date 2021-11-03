@@ -1,4 +1,5 @@
 use bot_test::{commands::exec_command, types::TwHttpClient};
+use cache::InRedisCache;
 use dotenv::dotenv;
 use futures::stream::StreamExt;
 use redis::{aio::Connection, AsyncCommands};
@@ -80,16 +81,20 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
             .build(),
     );
 
+    let redis_cache = Arc::new(InRedisCache::new());
+
     // Process each event as they come in.
     while let Some((shard_id, event)) = events.next().await {
         // Update the cache with the event.
         cache.update(&event);
+        redis_cache.update(&event).await;
 
         tokio::spawn(handle_event(
             shard_id,
             event,
             Arc::clone(&http),
             cache.clone(),
+            redis_cache.clone(),
         ));
     }
 
@@ -101,6 +106,7 @@ async fn handle_event(
     event: Event,
     http: TwHttpClient,
     cache: Arc<InMemoryCache>,
+    redis_cache: Arc<InRedisCache>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     match event {
         Event::MessageCreate(msg) if msg.content == "!ping" => {
@@ -132,44 +138,46 @@ async fn handle_event(
                 .expect("could not get stats for running process");
             println!("flop {:#?}", process_stats);
 
-            let client = redis::Client::open("redis://127.0.0.1/").unwrap();
-            let mut con = client.get_async_connection().await?;
+            // let client = redis::Client::open("redis://127.0.0.1/").unwrap();
+            // let mut con = client.get_async_connection().await?;
 
-            let redis_guilds: u64 = con.hlen("guilds").await?;
-            let redis_channels: u64 = con.hlen("channels").await?;
+            // let redis_guilds: u64 = con.hlen("guilds").await?;
+            // let redis_channels: u64 = con.hlen("channels").await?;
 
-            let embed =
-                EmbedBuilder::new()
-                    .description("Current statistics of the bot:")
-                    .field(
-                        EmbedFieldBuilder::new(
-                            "Cached Stuff:",
-                            format!(
-                        "guilds: {}\nchannels: {}\nmessages: {}\nmembers: {}\nvoice states: {}",
-                        guild_count, channel_count, message_count, member_count, voice_states_count
-                    ),
-                        )
-                        .inline(),
+            let redis_channels = redis_cache.channels_guild.size().await.unwrap();
+
+            let embed = EmbedBuilder::new()
+                .description("Current statistics of the bot:")
+                .field(
+                    EmbedFieldBuilder::new(
+                        "Cached Stuff:",
+                        format!(
+                            "guilds: {}\nchannels: {}\nmessages: {}\nmembers: {}\nvoice states: {}",
+                            guild_count,
+                            channel_count,
+                            message_count,
+                            member_count,
+                            voice_states_count
+                        ),
                     )
-                    .field(
-                        EmbedFieldBuilder::new(
-                            "Redis cache:",
-                            format!("guilds: {}\nchannels: {}", redis_guilds, redis_channels),
-                        )
+                    .inline(),
+                )
+                .field(
+                    EmbedFieldBuilder::new("Redis cache:", format!("channels: {}", redis_channels))
                         .inline(),
+                )
+                .field(EmbedFieldBuilder::new("\u{200B}", "\u{200B}").inline())
+                .field(
+                    EmbedFieldBuilder::new(
+                        "Memory usage:",
+                        format!(
+                            "{} MB",
+                            process_stats.memory_usage_bytes as f64 / 1_000_000.0
+                        ),
                     )
-                    .field(EmbedFieldBuilder::new("\u{200B}", "\u{200B}").inline())
-                    .field(
-                        EmbedFieldBuilder::new(
-                            "Memory usage:",
-                            format!(
-                                "{} MB",
-                                process_stats.memory_usage_bytes as f64 / 1_000_000.0
-                            ),
-                        )
-                        .inline(),
-                    )
-                    .build()?;
+                    .inline(),
+                )
+                .build()?;
 
             http.create_message(msg.channel_id)
                 .embeds(&[embed])?
@@ -192,26 +200,26 @@ async fn handle_event(
             }
         }
         Event::GuildCreate(guild) => {
-            let client = redis::Client::open("redis://127.0.0.1/").unwrap();
-            let mut con = client.get_async_connection().await?;
+            // let client = redis::Client::open("redis://127.0.0.1/").unwrap();
+            // let mut con = client.get_async_connection().await?;
 
-            let bytes = bincode::serialize(&guild).unwrap();
+            // let bytes = bincode::serialize(&guild).unwrap();
 
             // con.set("key1", bytes).await?;
-            con.hset("guilds", guild.id.0, bytes).await?;
+            // con.hset("guilds", guild.id.0, bytes).await?;
 
             // for c in guild.channels.iter() {
             //     let bin = bincode::serialize(&c).unwrap();
             //     con.hset("channels", c.id().0, bin).await?;
             // }
 
-            let items: Vec<(u64, Vec<u8>)> = guild
-                .channels
-                .iter()
-                .map(|c| (c.id().0.into(), bincode::serialize(&c).unwrap()))
-                .collect();
+            // let items: Vec<(u64, Vec<u8>)> = guild
+            //     .channels
+            //     .iter()
+            //     .map(|c| (c.id().0.into(), bincode::serialize(&c).unwrap()))
+            //     .collect();
 
-            con.hset_multiple("channels", &items).await?;
+            // con.hset_multiple("channels", &items).await?;
 
             // println!("{:?}", guild.channels);
         }

@@ -102,6 +102,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bincode",
+ "cache",
  "chrono",
  "dotenv",
  "env_logger",
@@ -168,6 +169,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "bincode",
+ "bitflags",
  "deadpool-redis",
  "futures",
  "rmp-serde",
