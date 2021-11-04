@@ -92,12 +92,11 @@ impl InRedisCache {
     /// The guild channel data itself and the channel entry in its guild's list
     /// of channels will be deleted.
     pub(crate) async fn delete_guild_channel(&self, guild_id: GuildId, channel_id: ChannelId) {
+        self.channels_guild.delete(channel_id.get()).await.ok();
         self.guild_channels
             .remove(guild_id.get(), channel_id.get())
             .await
             .ok();
-        info!("HEYA");
-        self.channels_guild.delete(channel_id.get()).await.ok();
     }
 
     // fn delete_group(&self, channel_id: ChannelId) {
