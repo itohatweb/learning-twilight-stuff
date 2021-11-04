@@ -1,5 +1,5 @@
 use bot_test::{commands::exec_command, types::TwHttpClient};
-use cache::InRedisCache;
+use cache::{InRedisCache, RedisSetCache};
 use dotenv::dotenv;
 use futures::stream::StreamExt;
 use redis::{aio::Connection, AsyncCommands};
@@ -145,6 +145,7 @@ async fn handle_event(
             // let redis_channels: u64 = con.hlen("channels").await?;
 
             let redis_channels = redis_cache.channels_guild.size().await.unwrap();
+            let redis_guilds = redis_cache.guilds.size().await.unwrap();
 
             let embed = EmbedBuilder::new()
                 .description("Current statistics of the bot:")
@@ -163,8 +164,11 @@ async fn handle_event(
                     .inline(),
                 )
                 .field(
-                    EmbedFieldBuilder::new("Redis cache:", format!("channels: {}", redis_channels))
-                        .inline(),
+                    EmbedFieldBuilder::new(
+                        "Redis cache:",
+                        format!("guilds: {}\nchannels: {}", redis_guilds, redis_channels),
+                    )
+                    .inline(),
                 )
                 .field(EmbedFieldBuilder::new("\u{200B}", "\u{200B}").inline())
                 .field(
@@ -183,10 +187,29 @@ async fn handle_event(
                 .embeds(&[embed])?
                 .exec()
                 .await?;
-            println!(
-                "---- Message event: {:?}",
-                serde_json::to_string(&cache.guild(msg.guild_id.unwrap()).as_deref())
-            );
+            // println!(
+            //     "---- Message event: {:?}",
+            //     serde_json::to_string(&cache.guild(msg.guild_id.unwrap()).as_deref())
+            // );
+
+            // let mut missing = vec![];
+
+            // for channel in cache.iter().guild_channels() {
+            //     let res = redis_cache
+            //         .channels_guild
+            //         .includes(channel.id().get())
+            //         .await
+            //         .unwrap();
+
+            //     if !res {
+            //         missing.push((channel.id().get(), format!("{}", channel.name())))
+            //     }
+            // }
+
+            // http.create_message(msg.channel_id)
+            //     .content(&format!("{:#?}", missing))?
+            //     .exec()
+            //     .await?;
         }
         Event::ShardConnected(_) => {
             println!("Connected on shard {}", shard_id);

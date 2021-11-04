@@ -1,4 +1,5 @@
 use crate::{config::ResourceType, GuildResource, InRedisCache, UpdateCache};
+use log::info;
 use twilight_model::{
     channel::{Channel, Group, GuildChannel, PrivateChannel},
     gateway::payload::incoming::{ChannelCreate, ChannelDelete, ChannelPinsUpdate, ChannelUpdate},
@@ -27,7 +28,7 @@ impl InRedisCache {
     pub(crate) async fn cache_guild_channel(&self, guild_id: GuildId, channel: GuildChannel) {
         let channel = self.replace_channels_guild_id(guild_id, channel);
 
-        // TODO: self.guild_channels.entry(guild_id).or_default().insert(id);
+        // TODO:self.guild_channels.entry(guild_id).or_default().insert(id);
 
         self.channels_guild
             .insert(
@@ -79,23 +80,25 @@ impl InRedisCache {
     //     crate::upsert_item(&self.groups, group.id, group)
     // }
 
-    // fn cache_private_channel(&self, private_channel: PrivateChannel) {
-    //     self.channels_private
-    //         .insert(private_channel.id, private_channel);
-    // }
+    async fn cache_private_channel(&self, private_channel: PrivateChannel) {
+        self.channels_private
+            .insert(private_channel.id.get(), &private_channel)
+            .await
+            .ok();
+    }
 
     /// Delete a guild channel from the cache.
     ///
     /// The guild channel data itself and the channel entry in its guild's list
     /// of channels will be deleted.
-    fn f() {}
-    // pub(crate) fn delete_guild_channel(&self, channel_id: ChannelId) {
-    //     if let Some((_, item)) = self.channels_guild.remove(&channel_id) {
-    //         if let Some(mut guild_channels) = self.guild_channels.get_mut(&item.guild_id) {
-    //             guild_channels.remove(&channel_id);
-    //         }
-    //     }
-    // }
+    pub(crate) async fn delete_guild_channel(&self, guild_id: GuildId, channel_id: ChannelId) {
+        self.guild_channels
+            .remove(guild_id.get(), channel_id.get())
+            .await
+            .ok();
+        info!("HEYA");
+        self.channels_guild.delete(channel_id.get()).await.ok();
+    }
 
     // fn delete_group(&self, channel_id: ChannelId) {
     //     self.groups.remove(&channel_id);
@@ -111,39 +114,44 @@ impl UpdateCache for ChannelCreate {
 
         match &self.0 {
             Channel::Group(c) => {
+                todo!()
                 // crate::upsert_item(&cache.groups, c.id, c.clone());
             }
             Channel::Guild(c) => {
                 if let Some(gid) = c.guild_id() {
-                    cache.cache_guild_channel(gid, c.clone());
+                    cache.cache_guild_channel(gid, c.clone()).await;
                 }
             }
             Channel::Private(c) => {
-                // cache.cache_private_channel(c.clone());
+                cache.cache_private_channel(c.clone()).await;
             }
         }
     }
 }
 
-// impl UpdateCache for ChannelDelete {
-//     fn update(&self, cache: &InMemoryCache) {
-//         if !cache.wants(ResourceType::CHANNEL) {
-//             return;
-//         }
+#[async_trait::async_trait]
+impl UpdateCache for ChannelDelete {
+    async fn update(&self, cache: &InRedisCache) {
+        if !cache.wants(ResourceType::CHANNEL) {
+            return;
+        }
 
-//         match self.0 {
-//             Channel::Group(ref c) => {
-//                 cache.delete_group(c.id);
-//             }
-//             Channel::Guild(ref c) => {
-//                 cache.delete_guild_channel(c.id());
-//             }
-//             Channel::Private(ref c) => {
-//                 cache.channels_private.remove(&c.id);
-//             }
-//         }
-//     }
-// }
+        match self.0 {
+            Channel::Group(ref c) => {
+                todo!()
+                // cache.delete_group(c.id);
+            }
+            Channel::Guild(ref c) => {
+                cache
+                    .delete_guild_channel(c.guild_id().unwrap(), c.id())
+                    .await;
+            }
+            Channel::Private(ref c) => {
+                cache.channels_private.delete(c.id.get()).await.ok();
+            }
+        }
+    }
+}
 
 // impl UpdateCache for ChannelPinsUpdate {
 //     fn update(&self, cache: &InMemoryCache) {

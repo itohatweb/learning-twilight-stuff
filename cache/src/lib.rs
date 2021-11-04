@@ -2,14 +2,18 @@ use std::ops::Deref;
 
 use crate::{config::ResourceType, model::CachedGuild};
 use config::Config;
-use log::error;
+use log::{error, info};
 use mobc_redis::{
     mobc::{Connection, Pool},
     redis::{self, cmd, AsyncCommands, RedisError},
     RedisConnectionManager,
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use twilight_model::{channel::GuildChannel, gateway::event::Event, id::GuildId};
+use twilight_model::{
+    channel::{GuildChannel, PrivateChannel},
+    gateway::event::Event,
+    id::GuildId,
+};
 
 // #[tokio::main]
 // async fn main() {
@@ -173,7 +177,7 @@ where
     pub fn new(connection_str: &str, prefix: String) -> RedisSetCache<K, V> {
         let client = redis::Client::open(connection_str).unwrap();
         let manager = RedisConnectionManager::new(client);
-        let pool = Pool::builder().max_open(20).build(manager);
+        let pool = Pool::builder().max_open(5).build(manager);
 
         Self {
             prefix,
@@ -183,27 +187,30 @@ where
         }
     }
 
-    pub async fn insert(&self, key: K, item: V) -> Result<(), CacheError> {
+    pub async fn insert(&self, key: K, item: &V) -> Result<(), CacheError> {
         let mut con = self.get_con().await?;
 
         let pack = rmp_serde::to_vec(&item).unwrap();
 
-        con.zadd(self.get_key(key), pack, 1).await?;
+        con.sadd(self.get_key(key), pack).await?;
 
         Ok(())
     }
 
     pub async fn insert_multiple(&self, key: K, items: Vec<V>) -> Result<(), CacheError> {
-        let mut con = self.get_con().await?;
+        let con = self.get_con().await?;
 
         let packs = items
             .into_iter()
-            .map(|c| (0, rmp_serde::to_vec(&c).unwrap()))
-            .collect::<Vec<(i8, Vec<u8>)>>();
+            .map(|c| rmp_serde::to_vec(&c).unwrap())
+            .collect::<Vec<Vec<u8>>>();
 
-        con.zadd_multiple(self.get_key(key), &packs).await?;
-
-        // con.hset_multiple(self.name.clone(), &packs).await?;
+        // con.set_multiple(self.get_key(key), &packs).await?;
+        cmd("SADD")
+            .arg(self.get_key(key))
+            .arg(packs)
+            .query_async(&mut con.into_inner())
+            .await?;
 
         Ok(())
     }
@@ -211,7 +218,7 @@ where
     pub async fn get(&self, key: K) -> Result<Vec<V>, CacheError> {
         let mut con = self.get_con().await?;
 
-        let value: Vec<Vec<u8>> = con.zrange(self.get_key(key), 0, -1).await?;
+        let value: Vec<Vec<u8>> = con.smembers(self.get_key(key)).await?;
 
         let dec = value
             .into_iter()
@@ -224,7 +231,7 @@ where
     pub async fn size(&self, key: K) -> Result<usize, CacheError> {
         let mut con = self.get_con().await?;
 
-        let length: usize = con.zcard(self.get_key(key)).await?;
+        let length: usize = con.scard(self.get_key(key)).await?;
 
         Ok(length)
     }
@@ -233,9 +240,7 @@ where
         let mut con = self.get_con().await?;
 
         let pack = rmp_serde::to_vec(&item).unwrap();
-
-        let del = con.zrem(self.get_key(key), pack).await?;
-
+        let del = con.srem(self.get_key(key), pack).await?;
         Ok(del)
     }
 
@@ -250,13 +255,12 @@ where
     pub async fn includes(&self, key: K, item: V) -> Result<bool, CacheError> {
         let mut con = self.get_con().await?;
 
-        let has1: Option<usize> = con
-            .zscore(self.get_key(key), rmp_serde::to_vec(&item).unwrap())
+        // TODO: check if this is correct
+        let member: bool = con
+            .sismember(self.get_key(key), rmp_serde::to_vec(&item).unwrap())
             .await?;
 
-        println!("IT HAS THIS: {:?}", has1);
-
-        Ok(true)
+        Ok(member)
     }
 
     async fn get_con(&self) -> Result<Connection<RedisConnectionManager>, CacheError> {
@@ -292,9 +296,39 @@ pub struct InRedisCache {
     config: Config,
 
     pub channels_guild: RedisHashMapCache<Snowflake, GuildResource<GuildChannel>>,
+    pub channels_private: RedisHashMapCache<Snowflake, PrivateChannel>,
+    // pub channel_messages:
+    // channel_messages: DashMap<ChannelId, VecDeque<MessageId>>,
+    // // So long as the lock isn't held across await or panic points this is fine.
+    // current_user: Mutex<Option<CurrentUser>>,
+    // emojis: DashMap<EmojiId, GuildResource<CachedEmoji>>,
+    // groups: DashMap<ChannelId, Group>,
     pub guilds: RedisHashMapCache<Snowflake, CachedGuild>,
-    // channels_guild: DashMap<ChannelId, GuildResource<GuildChannel>>,
-    // channels_private: DashMap<ChannelId, PrivateChannel>
+    pub guild_channels: RedisSetCache<Snowflake, Snowflake>,
+    // guild_channels: DashMap<GuildId, HashSet<ChannelId>>,
+    // guild_emojis: DashMap<GuildId, HashSet<EmojiId>>,
+    // guild_integrations: DashMap<GuildId, HashSet<IntegrationId>>,
+    // guild_members: DashMap<GuildId, HashSet<UserId>>,
+    // guild_presences: DashMap<GuildId, HashSet<UserId>>,
+    // guild_roles: DashMap<GuildId, HashSet<RoleId>>,
+    // guild_stage_instances: DashMap<GuildId, HashSet<StageId>>,
+    // guild_stickers: DashMap<GuildId, HashSet<StickerId>>,
+    // integrations: DashMap<(GuildId, IntegrationId), GuildResource<GuildIntegration>>,
+    // members: DashMap<(GuildId, UserId), CachedMember>,
+    // messages: DashMap<MessageId, CachedMessage>,
+    // presences: DashMap<(GuildId, UserId), CachedPresence>,
+    // roles: DashMap<RoleId, GuildResource<Role>>,
+    // stage_instances: DashMap<StageId, GuildResource<StageInstance>>,
+    // stickers: DashMap<StickerId, GuildResource<CachedSticker>>,
+    // unavailable_guilds: DashSet<GuildId>,
+    // users: DashMap<UserId, User>,
+    // user_guilds: DashMap<UserId, BTreeSet<GuildId>>,
+    // /// Mapping of channels and the users currently connected.
+    // voice_state_channels: DashMap<ChannelId, HashSet<(GuildId, UserId)>>,
+    // /// Mapping of guilds and users currently connected to its voice channels.
+    // voice_state_guilds: DashMap<GuildId, HashSet<UserId>>,
+    // /// Mapping of guild ID and user ID pairs to their voice states.
+    // voice_states: DashMap<(GuildId, UserId), VoiceState>
 }
 
 impl InRedisCache {
@@ -318,6 +352,11 @@ impl InRedisCache {
             config,
             channels_guild: RedisHashMapCache::new("redis://127.0.0.1", "channels_guild".into()),
             guilds: RedisHashMapCache::new("redis://127.0.0.1", "guilds".into()),
+            channels_private: RedisHashMapCache::new(
+                "redis://127.0.0.1",
+                "private_channels".into(),
+            ),
+            guild_channels: RedisSetCache::new("redis://127.0.0.1", "guild_channels".into()),
         }
     }
 
@@ -366,10 +405,8 @@ impl UpdateCache for Event {
         match self {
             BanAdd(_) => {}
             BanRemove(_) => {}
-            ChannelCreate(v) => {
-                c.update(v);
-                // c.channels_guild.insert(v.id().get(), v).await.ok();
-            }
+            ChannelCreate(v) => c.update(v).await,
+
             GuildCreate(gc) => {
                 let der = gc.deref().0.clone();
                 c.cache_guild_channels(der.id, der.channels).await;
@@ -414,6 +451,7 @@ impl UpdateCache for Event {
                     error!("MASTERING IT: {:?}", err)
                 }
             }
+            ChannelDelete(v) => c.update(v).await,
             _ => {} // ChannelDelete(v) => c.update(v),
                     // ChannelPinsUpdate(v) => c.update(v),
                     // ChannelUpdate(v) => c.update(v),
