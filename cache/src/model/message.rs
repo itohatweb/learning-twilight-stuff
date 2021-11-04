@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use twilight_model::{
     channel::{
         embed::Embed,
@@ -16,7 +16,7 @@ use twilight_model::{
 /// Represents a cached [`Message`].
 ///
 /// [`Message`]: twilight_model::channel::Message
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CachedMessage {
     activity: Option<MessageActivity>,
     application: Option<MessageApplication>,

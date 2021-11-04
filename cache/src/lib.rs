@@ -8,11 +8,15 @@ use mobc_redis::{
     redis::{self, cmd, AsyncCommands, RedisError},
     RedisConnectionManager,
 };
+use model::{CachedEmoji, CachedMember, CachedMessage, CachedPresence};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use twilight_model::{
-    channel::{GuildChannel, PrivateChannel},
+    channel::{message::Sticker, Group, GuildChannel, PrivateChannel, StageInstance},
     gateway::event::Event,
+    guild::{GuildIntegration, Role},
     id::GuildId,
+    user::User,
+    voice::VoiceState,
 };
 
 // #[tokio::main]
@@ -297,38 +301,36 @@ pub struct InRedisCache {
 
     pub channels_guild: RedisHashMapCache<Snowflake, GuildResource<GuildChannel>>,
     pub channels_private: RedisHashMapCache<Snowflake, PrivateChannel>,
-    // pub channel_messages:
-    // channel_messages: DashMap<ChannelId, VecDeque<MessageId>>,
-    // // So long as the lock isn't held across await or panic points this is fine.
+    pub channel_messages: RedisSetCache<Snowflake, Snowflake>,
+    // So long as the lock isn't held across await or panic points this is fine.
     // current_user: Mutex<Option<CurrentUser>>,
-    // emojis: DashMap<EmojiId, GuildResource<CachedEmoji>>,
-    // groups: DashMap<ChannelId, Group>,
+    pub emojis: RedisHashMapCache<Snowflake, GuildResource<CachedEmoji>>,
+    pub groups: RedisHashMapCache<Snowflake, Group>,
     pub guilds: RedisHashMapCache<Snowflake, CachedGuild>,
     pub guild_channels: RedisSetCache<Snowflake, Snowflake>,
-    // guild_channels: DashMap<GuildId, HashSet<ChannelId>>,
-    // guild_emojis: DashMap<GuildId, HashSet<EmojiId>>,
-    // guild_integrations: DashMap<GuildId, HashSet<IntegrationId>>,
-    // guild_members: DashMap<GuildId, HashSet<UserId>>,
-    // guild_presences: DashMap<GuildId, HashSet<UserId>>,
-    // guild_roles: DashMap<GuildId, HashSet<RoleId>>,
-    // guild_stage_instances: DashMap<GuildId, HashSet<StageId>>,
-    // guild_stickers: DashMap<GuildId, HashSet<StickerId>>,
-    // integrations: DashMap<(GuildId, IntegrationId), GuildResource<GuildIntegration>>,
-    // members: DashMap<(GuildId, UserId), CachedMember>,
-    // messages: DashMap<MessageId, CachedMessage>,
-    // presences: DashMap<(GuildId, UserId), CachedPresence>,
-    // roles: DashMap<RoleId, GuildResource<Role>>,
-    // stage_instances: DashMap<StageId, GuildResource<StageInstance>>,
-    // stickers: DashMap<StickerId, GuildResource<CachedSticker>>,
-    // unavailable_guilds: DashSet<GuildId>,
-    // users: DashMap<UserId, User>,
-    // user_guilds: DashMap<UserId, BTreeSet<GuildId>>,
-    // /// Mapping of channels and the users currently connected.
-    // voice_state_channels: DashMap<ChannelId, HashSet<(GuildId, UserId)>>,
-    // /// Mapping of guilds and users currently connected to its voice channels.
-    // voice_state_guilds: DashMap<GuildId, HashSet<UserId>>,
-    // /// Mapping of guild ID and user ID pairs to their voice states.
-    // voice_states: DashMap<(GuildId, UserId), VoiceState>
+    pub guild_emojis: RedisSetCache<Snowflake, Snowflake>,
+    pub guild_integrations: RedisSetCache<Snowflake, Snowflake>,
+    pub guild_members: RedisSetCache<Snowflake, Snowflake>,
+    pub guild_presences: RedisSetCache<Snowflake, Snowflake>,
+    pub guild_roles: RedisSetCache<Snowflake, Snowflake>,
+    pub guild_stage_instances: RedisSetCache<Snowflake, Snowflake>,
+    pub guild_stickers: RedisSetCache<Snowflake, Snowflake>,
+    pub integrations: RedisHashMapCache<(Snowflake, Snowflake), GuildResource<GuildIntegration>>,
+    pub members: RedisHashMapCache<(Snowflake, Snowflake), CachedMember>,
+    pub messages: RedisHashMapCache<Snowflake, CachedMessage>,
+    pub presences: RedisHashMapCache<(Snowflake, Snowflake), CachedPresence>,
+    pub roles: RedisHashMapCache<Snowflake, GuildResource<Role>>,
+    pub stage_instances: RedisHashMapCache<Snowflake, StageInstance>,
+    pub stickers: RedisHashMapCache<Snowflake, GuildResource<Sticker>>,
+    pub unavailable_guilds: RedisSetCache<String, Snowflake>,
+    pub users: RedisHashMapCache<Snowflake, User>,
+    pub user_guilds: RedisSetCache<Snowflake, Snowflake>,
+    /// Mapping of channels and the users currently connected.
+    pub voice_state_channels: RedisSetCache<Snowflake, (Snowflake, Snowflake)>,
+    /// Mapping of guilds and users currently connected to its voice channels.
+    pub voice_state_guilds: RedisSetCache<Snowflake, Snowflake>,
+    /// Mapping of guild ID and user ID pairs to their voice states.
+    pub voice_states: RedisHashMapCache<(Snowflake, Snowflake), VoiceState>,
 }
 
 impl InRedisCache {
@@ -351,12 +353,50 @@ impl InRedisCache {
         Self {
             config,
             channels_guild: RedisHashMapCache::new("redis://127.0.0.1", "channels_guild".into()),
-            guilds: RedisHashMapCache::new("redis://127.0.0.1", "guilds".into()),
             channels_private: RedisHashMapCache::new(
                 "redis://127.0.0.1",
-                "private_channels".into(),
+                "channels_private".into(),
             ),
+            channel_messages: RedisSetCache::new("redis://127.0.0.1", "channel_messages".into()),
+            emojis: RedisHashMapCache::new("redis://127.0.0.1", "emojis".into()),
+            groups: RedisHashMapCache::new("redis://127.0.0.1", "groups".into()),
+            guilds: RedisHashMapCache::new("redis://127.0.0.1", "guilds".into()),
+            integrations: RedisHashMapCache::new("redis://127.0.0.1", "integrations".into()),
+            members: RedisHashMapCache::new("redis://127.0.0.1", "members".into()),
+            messages: RedisHashMapCache::new("redis://127.0.0.1", "messages".into()),
+            presences: RedisHashMapCache::new("redis://127.0.0.1", "presences".into()),
+            roles: RedisHashMapCache::new("redis://127.0.0.1", "roles".into()),
+            stage_instances: RedisHashMapCache::new("redis://127.0.0.1", "stage_instances".into()),
+            stickers: RedisHashMapCache::new("redis://127.0.0.1", "stickers".into()),
+            users: RedisHashMapCache::new("redis://127.0.0.1", "users".into()),
+            voice_states: RedisHashMapCache::new("redis://127.0.0.1", "voice_states".into()),
             guild_channels: RedisSetCache::new("redis://127.0.0.1", "guild_channels".into()),
+            guild_emojis: RedisSetCache::new("redis://127.0.0.1", "guild_emojis".into()),
+            guild_integrations: RedisSetCache::new(
+                "redis://127.0.0.1",
+                "guild_integrations".into(),
+            ),
+            guild_members: RedisSetCache::new("redis://127.0.0.1", "guild_members".into()),
+            guild_presences: RedisSetCache::new("redis://127.0.0.1", "guild_presences".into()),
+            guild_roles: RedisSetCache::new("redis://127.0.0.1", "guild_roles".into()),
+            guild_stage_instances: RedisSetCache::new(
+                "redis://127.0.0.1",
+                "guild_stage_instances".into(),
+            ),
+            guild_stickers: RedisSetCache::new("redis://127.0.0.1", "guild_stickers".into()),
+            unavailable_guilds: RedisSetCache::new(
+                "redis://127.0.0.1",
+                "unavailable_guilds".into(),
+            ),
+            user_guilds: RedisSetCache::new("redis://127.0.0.1", "user_guilds".into()),
+            voice_state_channels: RedisSetCache::new(
+                "redis://127.0.0.1",
+                "voice_state_channels".into(),
+            ),
+            voice_state_guilds: RedisSetCache::new(
+                "redis://127.0.0.1",
+                "voice_state_guilds".into(),
+            ),
         }
     }
 

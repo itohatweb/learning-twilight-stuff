@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use twilight_model::{
     gateway::presence::{Activity, ClientStatus, Presence, Status, UserOrId},
     id::{GuildId, UserId},
@@ -7,7 +7,7 @@ use twilight_model::{
 /// Represents a cached [`Presence`].
 ///
 /// [`Presence`]: twilight_model::gateway::presence::Presence
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CachedPresence {
     pub(crate) activities: Vec<Activity>,
     pub(crate) client_status: ClientStatus,

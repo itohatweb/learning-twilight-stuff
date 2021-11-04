@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use twilight_model::{
     application::interaction::application_command::InteractionMember,
     datetime::Timestamp,
@@ -9,7 +9,7 @@ use twilight_model::{
 /// Represents a cached [`Member`].
 ///
 /// [`Member`]: twilight_model::guild::Member
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CachedMember {
     pub(crate) deaf: Option<bool>,
     pub(crate) guild_id: GuildId,

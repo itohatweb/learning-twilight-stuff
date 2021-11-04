@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use twilight_model::{
     guild::Emoji,
     id::{EmojiId, RoleId, UserId},
@@ -7,7 +7,7 @@ use twilight_model::{
 /// Represents a cached [`Emoji`].
 ///
 /// [`Emoji`]: twilight_model::guild::Emoji
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CachedEmoji {
     pub(crate) animated: bool,
     pub(crate) available: bool,

@@ -114,6 +114,7 @@ impl UpdateCache for ChannelCreate {
         match &self.0 {
             Channel::Group(c) => {
                 todo!()
+                // TODO
                 // crate::upsert_item(&cache.groups, c.id, c.clone());
             }
             Channel::Guild(c) => {
@@ -138,6 +139,7 @@ impl UpdateCache for ChannelDelete {
         match self.0 {
             Channel::Group(ref c) => {
                 todo!()
+                // TODO
                 // cache.delete_group(c.id);
             }
             Channel::Guild(ref c) => {
