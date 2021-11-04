@@ -1,4 +1,4 @@
-use crate::{config::ResourceType, InRedisCache, UpdateCache};
+use crate::{config::ResourceType, GuildResource, InRedisCache, UpdateCache};
 use twilight_model::{
     channel::{Channel, Group, GuildChannel, PrivateChannel},
     gateway::payload::incoming::{ChannelCreate, ChannelDelete, ChannelPinsUpdate, ChannelUpdate},
@@ -11,27 +11,17 @@ impl InRedisCache {
         guild_id: GuildId,
         guild_channels: impl IntoIterator<Item = GuildChannel>,
     ) {
-        // let guild_channels: Vec<(u64, &GuildChannel)> = &guild_channels
-        //     .into_iter()
-        //     .map(|c| (c.id().get(), self.replace_channels_guild_id(guild_id, c)))
-        //     .collect();
-        // let guild_channels: Vec<(u64, &GuildChannel)> = guild_channels
-        //     .into_iter()
-        //     .map(|c| (c.id().get(), self.replace_channels_guild_id(guild_id, c)))
-        //     .collect();
-
         let mut conv = Vec::new();
         for channel in guild_channels {
-            let c = self.replace_channels_guild_id(guild_id, channel);
+            let c = GuildResource {
+                guild_id,
+                value: self.replace_channels_guild_id(guild_id, channel),
+            };
             // conv.add((channel.id().get(), &channel));
-            conv.push((c.id().get(), c))
+            conv.push((c.value.id().get(), c))
         }
 
-        self.channels_guild.insert_multiple(conv).await;
-
-        // for channel in guild_channels {
-        //     self.cache_guild_channel(guild_id, channel);
-        // }
+        self.channels_guild.insert_multiple(conv).await.ok();
     }
 
     pub(crate) async fn cache_guild_channel(&self, guild_id: GuildId, channel: GuildChannel) {
@@ -40,8 +30,15 @@ impl InRedisCache {
         // TODO: self.guild_channels.entry(guild_id).or_default().insert(id);
 
         self.channels_guild
-            .insert(channel.id().get(), channel)
-            .await;
+            .insert(
+                channel.id().get(),
+                &GuildResource {
+                    guild_id,
+                    value: channel,
+                },
+            )
+            .await
+            .ok();
 
         // crate::upsert_guild_item(&self.channels_guild, guild_id, id, channel);
     }

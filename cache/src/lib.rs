@@ -58,10 +58,10 @@ impl From<RedisError> for CacheError {
     }
 }
 
-pub struct Cache<K, V>
+pub struct RedisHashMapCache<K, V>
 where
     K: mobc_redis::redis::ToRedisArgs + std::marker::Sync + std::marker::Send,
-    V: DeserializeOwned,
+    V: DeserializeOwned + Serialize,
 {
     name: String,
     pool: Pool<RedisConnectionManager>,
@@ -69,12 +69,12 @@ where
     value_type: std::marker::PhantomData<V>,
 }
 
-impl<K, V> Cache<K, V>
+impl<K, V> RedisHashMapCache<K, V>
 where
     K: mobc_redis::redis::ToRedisArgs + std::marker::Sync + std::marker::Send,
-    V: DeserializeOwned,
+    V: DeserializeOwned + Serialize,
 {
-    pub fn new(connection_str: &str, map_name: String) -> Cache<K, V> {
+    pub fn new(connection_str: &str, map_name: String) -> RedisHashMapCache<K, V> {
         let client = redis::Client::open(connection_str).unwrap();
         let manager = RedisConnectionManager::new(client);
         let pool = Pool::builder().max_open(20).build(manager);
@@ -87,10 +87,7 @@ where
         }
     }
 
-    pub async fn insert<T>(&self, key: K, item: T) -> Result<(), CacheError>
-    where
-        T: Serialize,
-    {
+    pub async fn insert(&self, key: K, item: &V) -> Result<(), CacheError> {
         let mut con = self.get_con().await?;
 
         let pack = rmp_serde::to_vec(&item).unwrap();
@@ -100,10 +97,7 @@ where
         Ok(())
     }
 
-    pub async fn insert_multiple<T>(&self, items: Vec<(K, T)>) -> Result<(), CacheError>
-    where
-        T: Serialize,
-    {
+    pub async fn insert_multiple(&self, items: Vec<(K, V)>) -> Result<(), CacheError> {
         let mut con = self.get_con().await?;
 
         let packs = items
@@ -160,6 +154,120 @@ where
     }
 }
 
+pub struct RedisSetCache<K, V>
+where
+    K: std::fmt::Display + std::marker::Sync + std::marker::Send,
+    V: DeserializeOwned + Serialize,
+{
+    prefix: String,
+    pool: Pool<RedisConnectionManager>,
+    key_type: std::marker::PhantomData<K>,
+    value_type: std::marker::PhantomData<V>,
+}
+
+impl<K, V> RedisSetCache<K, V>
+where
+    K: std::fmt::Display + std::marker::Sync + std::marker::Send,
+    V: DeserializeOwned + Serialize,
+{
+    pub fn new(connection_str: &str, prefix: String) -> RedisSetCache<K, V> {
+        let client = redis::Client::open(connection_str).unwrap();
+        let manager = RedisConnectionManager::new(client);
+        let pool = Pool::builder().max_open(20).build(manager);
+
+        Self {
+            prefix,
+            pool,
+            key_type: std::marker::PhantomData,
+            value_type: std::marker::PhantomData,
+        }
+    }
+
+    pub async fn insert(&self, key: K, item: V) -> Result<(), CacheError> {
+        let mut con = self.get_con().await?;
+
+        let pack = rmp_serde::to_vec(&item).unwrap();
+
+        con.zadd(self.get_key(key), pack, 1).await?;
+
+        Ok(())
+    }
+
+    pub async fn insert_multiple(&self, key: K, items: Vec<V>) -> Result<(), CacheError> {
+        let mut con = self.get_con().await?;
+
+        let packs = items
+            .into_iter()
+            .map(|c| (0, rmp_serde::to_vec(&c).unwrap()))
+            .collect::<Vec<(i8, Vec<u8>)>>();
+
+        con.zadd_multiple(self.get_key(key), &packs).await?;
+
+        // con.hset_multiple(self.name.clone(), &packs).await?;
+
+        Ok(())
+    }
+
+    pub async fn get(&self, key: K) -> Result<Vec<V>, CacheError> {
+        let mut con = self.get_con().await?;
+
+        let value: Vec<Vec<u8>> = con.zrange(self.get_key(key), 0, -1).await?;
+
+        let dec = value
+            .into_iter()
+            .map(|v| rmp_serde::from_read(&*v).unwrap())
+            .collect::<Vec<V>>();
+
+        Ok(dec)
+    }
+
+    pub async fn size(&self, key: K) -> Result<usize, CacheError> {
+        let mut con = self.get_con().await?;
+
+        let length: usize = con.zcard(self.get_key(key)).await?;
+
+        Ok(length)
+    }
+
+    pub async fn remove(&self, key: K, item: V) -> Result<bool, CacheError> {
+        let mut con = self.get_con().await?;
+
+        let pack = rmp_serde::to_vec(&item).unwrap();
+
+        let del = con.zrem(self.get_key(key), pack).await?;
+
+        Ok(del)
+    }
+
+    pub async fn delete(&self, key: K) -> Result<bool, CacheError> {
+        let mut con = self.get_con().await?;
+
+        let del = con.del(self.get_key(key)).await?;
+
+        Ok(del)
+    }
+
+    pub async fn includes(&self, key: K, item: V) -> Result<bool, CacheError> {
+        let mut con = self.get_con().await?;
+
+        let has1: Option<usize> = con
+            .zscore(self.get_key(key), rmp_serde::to_vec(&item).unwrap())
+            .await?;
+
+        println!("IT HAS THIS: {:?}", has1);
+
+        Ok(true)
+    }
+
+    async fn get_con(&self) -> Result<Connection<RedisConnectionManager>, CacheError> {
+        Ok(self.pool.get().await?)
+    }
+
+    fn get_key(&self, key: K) -> String {
+        format!("{}-{}", self.prefix, key)
+    }
+}
+
 type Snowflake = u64;
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -183,8 +291,8 @@ impl<T> GuildResource<T> {
 pub struct InRedisCache {
     config: Config,
 
-    pub channels_guild: Cache<Snowflake, GuildResource<GuildChannel>>,
-    pub guilds: Cache<Snowflake, CachedGuild>,
+    pub channels_guild: RedisHashMapCache<Snowflake, GuildResource<GuildChannel>>,
+    pub guilds: RedisHashMapCache<Snowflake, CachedGuild>,
     // channels_guild: DashMap<ChannelId, GuildResource<GuildChannel>>,
     // channels_private: DashMap<ChannelId, PrivateChannel>
 }
@@ -208,8 +316,8 @@ impl InRedisCache {
 
         Self {
             config,
-            channels_guild: Cache::new("redis://127.0.0.1", "channels_guild".into()),
-            guilds: Cache::new("redis://127.0.0.1", "guilds".into()),
+            channels_guild: RedisHashMapCache::new("redis://127.0.0.1", "channels_guild".into()),
+            guilds: RedisHashMapCache::new("redis://127.0.0.1", "guilds".into()),
         }
     }
 
@@ -259,7 +367,8 @@ impl UpdateCache for Event {
             BanAdd(_) => {}
             BanRemove(_) => {}
             ChannelCreate(v) => {
-                c.channels_guild.insert(v.id().get(), v).await.ok();
+                c.update(v);
+                // c.channels_guild.insert(v.id().get(), v).await.ok();
             }
             GuildCreate(gc) => {
                 let der = gc.deref().0.clone();
@@ -301,7 +410,7 @@ impl UpdateCache for Event {
                     widget_channel_id: der.widget_channel_id,
                     widget_enabled: der.widget_enabled,
                 };
-                if let Err(err) = c.guilds.insert(u64::from(der.id.0), guild).await {
+                if let Err(err) = c.guilds.insert(u64::from(der.id.0), &guild).await {
                     error!("MASTERING IT: {:?}", err)
                 }
             }
