@@ -2,56 +2,58 @@ use std::ops::Deref;
 
 use crate::{config::ResourceType, model::CachedGuild};
 use config::Config;
-use log::error;
-use mobc_redis::{
-    mobc::{Connection, Pool},
-    redis::{self, cmd, AsyncCommands, RedisError},
-    RedisConnectionManager,
+use deadpool_redis::{
+    redis::{cmd, AsyncCommands, RedisError},
+    Config as DeadpoolConfig, Connection, Pool, Runtime,
 };
+use log::error;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use twilight_model::{channel::GuildChannel, gateway::event::Event, id::GuildId};
+use twilight_model::{
+    channel::GuildChannel,
+    gateway::{event::Event, payload::incoming::GuildCreate},
+    id::{ChannelId, GuildId},
+};
 
-// #[tokio::main]
-// async fn main() {
-//     #[derive(Debug, PartialEq, Deserialize, Serialize)]
-//     struct Human {
-//         age: u32,
-//         name: String,
-//     }
+#[tokio::main]
+async fn main() {
+    #[derive(Debug, PartialEq, Deserialize, Serialize)]
+    struct Human {
+        age: u32,
+        name: String,
+    }
 
-//     // let mut buf = Vec::new();
-//     let val = Human {
-//         age: 42,
-//         name: "John".into(),
-//     };
+    // let mut buf = Vec::new();
+    let val = Human {
+        age: 42,
+        name: "John".into(),
+    };
 
-//     let c: Cache<String, Human> = Cache::new("redis://127.0.0.1", "humans".into());
+    let c: Cache<String, Human> = Cache::new("redis://127.0.0.1", "humans".into());
 
-//     c.insert("I".into(), val).await.unwrap();
+    c.insert("I".into(), val).await.unwrap();
 
-//     let g = c.get("I".into()).await.unwrap();
+    let g = c.get("I".into()).await.unwrap();
 
-//     println!("{:?}", g);
+    println!("{:?}", g);
 
-//     let d = c.delete("I dont exist".into()).await.unwrap();
+    let d = c.delete("I dont exist".into()).await.unwrap();
 
-//     println!("deleted: {:?}", d);
-// }
+    println!("deleted: {:?}", d);
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum CacheError {
     #[error("Was not able to get redids db pool")]
-    FailedToGetPool(mobc_redis::mobc::Error<RedisError>),
+    FailedToGetPool(deadpool_redis::PoolError),
     #[error("Redis command error")]
     RedisError,
 }
 
-impl From<mobc_redis::mobc::Error<RedisError>> for CacheError {
-    fn from(err: mobc_redis::mobc::Error<RedisError>) -> Self {
+impl From<deadpool_redis::PoolError> for CacheError {
+    fn from(err: deadpool_redis::PoolError) -> Self {
         Self::FailedToGetPool(err)
     }
 }
-
 impl From<RedisError> for CacheError {
     fn from(_: RedisError) -> Self {
         Self::RedisError
@@ -60,24 +62,30 @@ impl From<RedisError> for CacheError {
 
 pub struct Cache<K, V>
 where
-    K: mobc_redis::redis::ToRedisArgs + std::marker::Sync + std::marker::Send,
+    K: deadpool_redis::redis::ToRedisArgs + std::marker::Sync + std::marker::Send,
     V: DeserializeOwned,
 {
     name: String,
-    pool: Pool<RedisConnectionManager>,
+    pool: Pool,
     key_type: std::marker::PhantomData<K>,
     value_type: std::marker::PhantomData<V>,
 }
 
 impl<K, V> Cache<K, V>
 where
-    K: mobc_redis::redis::ToRedisArgs + std::marker::Sync + std::marker::Send,
+    K: deadpool_redis::redis::ToRedisArgs + std::marker::Sync + std::marker::Send,
     V: DeserializeOwned,
 {
     pub fn new(connection_str: &str, map_name: String) -> Cache<K, V> {
-        let client = redis::Client::open(connection_str).unwrap();
-        let manager = RedisConnectionManager::new(client);
-        let pool = Pool::builder().max_open(20).build(manager);
+        let pool = DeadpoolConfig::from_url(connection_str)
+            .builder()
+            .unwrap()
+            .max_size(10)
+            .runtime(Runtime::Tokio1)
+            .recycle_timeout(Some(std::time::Duration::from_secs(10000)))
+            .build()
+            .unwrap();
+        // let pool = cfg.create_pool(Some(Runtime::Tokio1)).unwrap();
 
         Self {
             name: map_name,
@@ -117,12 +125,12 @@ where
     }
 
     pub async fn get(&self, key: K) -> Result<V, CacheError> {
-        let con = self.get_con().await?;
+        let mut con = self.get_con().await?;
 
         let value: Vec<u8> = cmd("HGET")
             .arg(self.name.clone())
             .arg(key)
-            .query_async(&mut con.into_inner())
+            .query_async(&mut con)
             .await?;
 
         let dec = rmp_serde::from_read(&*value).unwrap();
@@ -154,9 +162,8 @@ where
         Ok(has)
     }
 
-    async fn get_con(&self) -> Result<Connection<RedisConnectionManager>, CacheError> {
+    async fn get_con(&self) -> Result<Connection, CacheError> {
         Ok(self.pool.get().await?)
-        // Ok(self.pool.get().await?)
     }
 }
 
@@ -259,7 +266,7 @@ impl UpdateCache for Event {
             BanAdd(_) => {}
             BanRemove(_) => {}
             ChannelCreate(v) => {
-                c.channels_guild.insert(v.id().get(), v).await.ok();
+                c.channels_guild.insert(v.id().get(), v).await;
             }
             GuildCreate(gc) => {
                 let der = gc.deref().0.clone();

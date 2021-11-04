@@ -1,5 +1,4 @@
 use crate::{config::ResourceType, InRedisCache, UpdateCache};
-use deadpool_redis::redis::ToRedisArgs;
 use twilight_model::{
     channel::{Channel, Group, GuildChannel, PrivateChannel},
     gateway::payload::incoming::{ChannelCreate, ChannelDelete, ChannelPinsUpdate, ChannelUpdate},
