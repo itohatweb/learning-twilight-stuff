@@ -109,7 +109,7 @@ async fn handle_event(
     redis_cache: Arc<InRedisCache>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     match event {
-        Event::MessageCreate(msg) if msg.content == "!ping" => {
+        Event::MessageCreate(msg) if msg.content == "++ping" => {
             if !msg
                 .author
                 .id
@@ -146,6 +146,7 @@ async fn handle_event(
 
             let redis_channels = redis_cache.channels_guild.size().await.unwrap();
             let redis_guilds = redis_cache.guilds.size().await.unwrap();
+            let redis_messages = redis_cache.messages.size().await.unwrap();
 
             let embed = EmbedBuilder::new()
                 .description("Current statistics of the bot:")
@@ -166,7 +167,10 @@ async fn handle_event(
                 .field(
                     EmbedFieldBuilder::new(
                         "Redis cache:",
-                        format!("guilds: {}\nchannels: {}", redis_guilds, redis_channels),
+                        format!(
+                            "guilds: {}\nchannels: {}\nmessages: {}",
+                            redis_guilds, redis_channels, redis_messages
+                        ),
                     )
                     .inline(),
                 )
@@ -218,33 +222,9 @@ async fn handle_event(
             // println!("vsu: {:?}", vsu);
         }
         Event::InteractionCreate(interaction) => {
-            if let Interaction::ApplicationCommand(command) = interaction.0 {
-                exec_command(http, &command, cache).await?;
-            }
-        }
-        Event::GuildCreate(guild) => {
-            // let client = redis::Client::open("redis://127.0.0.1/").unwrap();
-            // let mut con = client.get_async_connection().await?;
-
-            // let bytes = bincode::serialize(&guild).unwrap();
-
-            // con.set("key1", bytes).await?;
-            // con.hset("guilds", guild.id.0, bytes).await?;
-
-            // for c in guild.channels.iter() {
-            //     let bin = bincode::serialize(&c).unwrap();
-            //     con.hset("channels", c.id().0, bin).await?;
+            // if let Interaction::ApplicationCommand(command) = interaction.0 {
+            //     exec_command(http, &command, cache).await?;
             // }
-
-            // let items: Vec<(u64, Vec<u8>)> = guild
-            //     .channels
-            //     .iter()
-            //     .map(|c| (c.id().0.into(), bincode::serialize(&c).unwrap()))
-            //     .collect();
-
-            // con.hset_multiple("channels", &items).await?;
-
-            // println!("{:?}", guild.channels);
         }
         // Other events here...
         _ => {}
