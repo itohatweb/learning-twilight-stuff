@@ -76,9 +76,9 @@ impl InRedisCache {
         channel
     }
 
-    // fn cache_group(&self, group: Group) {
-    //     crate::upsert_item(&self.groups, group.id, group)
-    // }
+    async fn cache_group(&self, group: Group) {
+        self.groups.insert(group.id.get(), &group).await.ok();
+    }
 
     async fn cache_private_channel(&self, private_channel: PrivateChannel) {
         self.channels_private
@@ -99,9 +99,9 @@ impl InRedisCache {
             .ok();
     }
 
-    // fn delete_group(&self, channel_id: ChannelId) {
-    //     self.groups.remove(&channel_id);
-    // }
+    async fn delete_group(&self, channel_id: ChannelId) {
+        self.groups.delete(channel_id.get()).await.ok();
+    }
 }
 
 #[async_trait::async_trait]
@@ -154,55 +154,73 @@ impl UpdateCache for ChannelDelete {
     }
 }
 
-// impl UpdateCache for ChannelPinsUpdate {
-//     fn update(&self, cache: &InMemoryCache) {
-//         if !cache.wants(ResourceType::CHANNEL) {
-//             return;
-//         }
+#[async_trait::async_trait]
+impl UpdateCache for ChannelPinsUpdate {
+    async fn update(&self, cache: &InRedisCache) {
+        if !cache.wants(ResourceType::CHANNEL) {
+            return;
+        }
 
-//         if let Some(mut r) = cache.channels_guild.get_mut(&self.channel_id) {
-//             let value = r.value_mut();
+        if self.guild_id.is_some() {
+            if let Ok(mut r) = cache.channels_guild.get(self.channel_id.get()).await {
+                if let GuildChannel::Text(ref mut text) = r.value {
+                    text.last_pin_timestamp = self.last_pin_timestamp;
+                }
+                cache
+                    .channels_guild
+                    .insert(self.channel_id.get(), &r)
+                    .await
+                    .ok();
 
-//             if let GuildChannel::Text(ref mut text) = value.value {
-//                 text.last_pin_timestamp = self.last_pin_timestamp;
-//             }
+                return;
+            }
+        }
 
-//             return;
-//         }
+        if let Ok(mut channel) = cache.channels_private.get(self.channel_id.get()).await {
+            channel.last_pin_timestamp = self.last_pin_timestamp;
+            cache
+                .channels_private
+                .insert(self.channel_id.get(), &channel)
+                .await
+                .ok();
 
-//         if let Some(mut channel) = cache.channels_private.get_mut(&self.channel_id) {
-//             channel.last_pin_timestamp = self.last_pin_timestamp;
+            return;
+        }
 
-//             return;
-//         }
+        if let Ok(mut group) = cache.groups.get(self.channel_id.get()).await {
+            group.last_pin_timestamp = self.last_pin_timestamp;
 
-//         if let Some(mut group) = cache.groups.get_mut(&self.channel_id) {
-//             group.last_pin_timestamp = self.last_pin_timestamp;
-//         }
-//     }
-// }
+            cache
+                .groups
+                .insert(self.channel_id.get(), &group)
+                .await
+                .ok();
+        }
+    }
+}
 
-// impl UpdateCache for ChannelUpdate {
-//     fn update(&self, cache: &InMemoryCache) {
-//         if !cache.wants(ResourceType::CHANNEL) {
-//             return;
-//         }
+#[async_trait::async_trait]
+impl UpdateCache for ChannelUpdate {
+    async fn update(&self, cache: &InRedisCache) {
+        if !cache.wants(ResourceType::CHANNEL) {
+            return;
+        }
 
-//         match self.0.clone() {
-//             Channel::Group(c) => {
-//                 cache.cache_group(c);
-//             }
-//             Channel::Guild(c) => {
-//                 if let Some(gid) = c.guild_id() {
-//                     cache.cache_guild_channel(gid, c);
-//                 }
-//             }
-//             Channel::Private(c) => {
-//                 cache.cache_private_channel(c);
-//             }
-//         }
-//     }
-// }
+        match self.0.clone() {
+            Channel::Group(c) => {
+                cache.cache_group(c).await;
+            }
+            Channel::Guild(c) => {
+                if let Some(gid) = c.guild_id() {
+                    cache.cache_guild_channel(gid, c).await;
+                }
+            }
+            Channel::Private(c) => {
+                cache.cache_private_channel(c).await;
+            }
+        }
+    }
+}
 
 // #[cfg(test)]
 // mod tests {
