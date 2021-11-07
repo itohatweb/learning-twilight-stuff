@@ -43,7 +43,7 @@ impl UpdateCache for MessageCreate {
 
         cache
             .messages
-            .insert(self.0.id.get(), &CachedMessage::from(self.0.clone()))
+            .insert(self.0.id.get(), CachedMessage::from(self.0.clone()))
             .await;
     }
 }
@@ -89,7 +89,7 @@ impl UpdateCache for MessageUpdate {
             return;
         }
 
-        if let Ok(mut message) = cache.messages.get(self.id.get()).await {
+        if let Some(mut message) = cache.messages.get(self.id.get()).await {
             if let Some(attachments) = &self.attachments {
                 message.attachments = attachments.clone();
             }
@@ -130,7 +130,7 @@ impl UpdateCache for MessageUpdate {
                 message.tts = tts;
             }
 
-            cache.messages.insert(self.id.get(), &message).await;
+            cache.messages.insert(self.id.get(), message).await;
         }
     }
 }

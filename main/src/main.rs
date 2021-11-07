@@ -147,6 +147,7 @@ async fn handle_event(
             let redis_channels = redis_cache.channels_guild.size().await.unwrap();
             let redis_guilds = redis_cache.guilds.size().await.unwrap();
             let redis_messages = redis_cache.messages.size().await.unwrap();
+            let redis_members = redis_cache.members.size().await.unwrap();
 
             let embed = EmbedBuilder::new()
                 .description("Current statistics of the bot:")
@@ -168,8 +169,8 @@ async fn handle_event(
                     EmbedFieldBuilder::new(
                         "Redis cache:",
                         format!(
-                            "guilds: {}\nchannels: {}\nmessages: {}",
-                            redis_guilds, redis_channels, redis_messages
+                            "guilds: {}\nchannels: {}\nmessages: {}\nmembers: {}",
+                            redis_guilds, redis_channels, redis_messages, redis_members
                         ),
                     )
                     .inline(),

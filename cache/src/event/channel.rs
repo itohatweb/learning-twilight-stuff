@@ -22,26 +22,24 @@ impl InRedisCache {
             conv.push((c.value.id().get(), c))
         }
 
-        self.channels_guild.insert_multiple(conv).await.ok();
+        self.channels_guild.insert_multiple(conv).await;
     }
 
     pub(crate) async fn cache_guild_channel(&self, guild_id: GuildId, channel: GuildChannel) {
         let channel = self.replace_channels_guild_id(guild_id, channel);
 
-        // TODO:self.guild_channels.entry(guild_id).or_default().insert(id);
+        // TODO cache
+        // self.guild_channels.entry(guild_id).or_default().insert(id);
 
         self.channels_guild
             .insert(
                 channel.id().get(),
-                &GuildResource {
+                GuildResource {
                     guild_id,
                     value: channel,
                 },
             )
-            .await
-            .ok();
-
-        // crate::upsert_guild_item(&self.channels_guild, guild_id, id, channel);
+            .await;
     }
 
     fn replace_channels_guild_id(
@@ -77,14 +75,13 @@ impl InRedisCache {
     }
 
     async fn cache_group(&self, group: Group) {
-        self.groups.insert(group.id.get(), &group).await.ok();
+        self.groups.insert(group.id.get(), group).await;
     }
 
     async fn cache_private_channel(&self, private_channel: PrivateChannel) {
         self.channels_private
-            .insert(private_channel.id.get(), &private_channel)
-            .await
-            .ok();
+            .insert(private_channel.id.get(), private_channel)
+            .await;
     }
 
     /// Delete a guild channel from the cache.
@@ -92,7 +89,7 @@ impl InRedisCache {
     /// The guild channel data itself and the channel entry in its guild's list
     /// of channels will be deleted.
     pub(crate) async fn delete_guild_channel(&self, guild_id: GuildId, channel_id: ChannelId) {
-        self.channels_guild.delete(channel_id.get()).await.ok();
+        self.channels_guild.delete(channel_id.get()).await;
         self.guild_channels
             .remove(guild_id.get(), channel_id.get())
             .await
@@ -100,7 +97,7 @@ impl InRedisCache {
     }
 
     async fn delete_group(&self, channel_id: ChannelId) {
-        self.groups.delete(channel_id.get()).await.ok();
+        self.groups.delete(channel_id.get()).await;
     }
 }
 
@@ -148,7 +145,7 @@ impl UpdateCache for ChannelDelete {
                     .await;
             }
             Channel::Private(ref c) => {
-                cache.channels_private.delete(c.id.get()).await.ok();
+                cache.channels_private.delete(c.id.get()).await;
             }
         }
     }
@@ -162,39 +159,30 @@ impl UpdateCache for ChannelPinsUpdate {
         }
 
         if self.guild_id.is_some() {
-            if let Ok(mut r) = cache.channels_guild.get(self.channel_id.get()).await {
+            if let Some(mut r) = cache.channels_guild.get(self.channel_id.get()).await {
                 if let GuildChannel::Text(ref mut text) = r.value {
                     text.last_pin_timestamp = self.last_pin_timestamp;
                 }
-                cache
-                    .channels_guild
-                    .insert(self.channel_id.get(), &r)
-                    .await
-                    .ok();
+                cache.channels_guild.insert(self.channel_id.get(), r).await;
 
                 return;
             }
         }
 
-        if let Ok(mut channel) = cache.channels_private.get(self.channel_id.get()).await {
+        if let Some(mut channel) = cache.channels_private.get(self.channel_id.get()).await {
             channel.last_pin_timestamp = self.last_pin_timestamp;
             cache
                 .channels_private
-                .insert(self.channel_id.get(), &channel)
-                .await
-                .ok();
+                .insert(self.channel_id.get(), channel)
+                .await;
 
             return;
         }
 
-        if let Ok(mut group) = cache.groups.get(self.channel_id.get()).await {
+        if let Some(mut group) = cache.groups.get(self.channel_id.get()).await {
             group.last_pin_timestamp = self.last_pin_timestamp;
 
-            cache
-                .groups
-                .insert(self.channel_id.get(), &group)
-                .await
-                .ok();
+            cache.groups.insert(self.channel_id.get(), group).await;
         }
     }
 }

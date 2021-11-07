@@ -1,73 +1,84 @@
-use crate::{config::ResourceType, InMemoryCache, UpdateCache};
+use crate::{config::ResourceType, GuildResource, InRedisCache, UpdateCache};
 use twilight_model::{
     gateway::payload::incoming::{IntegrationCreate, IntegrationDelete, IntegrationUpdate},
     guild::GuildIntegration,
     id::{GuildId, IntegrationId},
 };
 
-impl InMemoryCache {
-    fn cache_integration(&self, guild_id: GuildId, integration: GuildIntegration) {
+impl InRedisCache {
+    async fn cache_integration(&self, guild_id: GuildId, integration: GuildIntegration) {
+        // self.guild_integrations
+        //     .entry(guild_id)
+        //     .or_default()
+        //     .insert(integration.id);
+
         self.guild_integrations
-            .entry(guild_id)
-            .or_default()
-            .insert(integration.id);
+            .insert(guild_id.get(), &integration.id.get())
+            .await;
 
-        crate::upsert_guild_item(
-            &self.integrations,
-            guild_id,
-            (guild_id, integration.id),
-            integration,
-        );
+        self.integrations
+            .insert(
+                (guild_id.get(), integration.id.get()),
+                GuildResource {
+                    guild_id,
+                    value: integration,
+                },
+            )
+            .await;
     }
 
-    fn delete_integration(&self, guild_id: GuildId, integration_id: IntegrationId) {
-        if self
-            .integrations
-            .remove(&(guild_id, integration_id))
-            .is_some()
-        {
-            if let Some(mut integrations) = self.guild_integrations.get_mut(&guild_id) {
-                integrations.remove(&integration_id);
-            }
-        }
+    async fn delete_integration(&self, guild_id: GuildId, integration_id: IntegrationId) {
+        self.integrations
+            .delete((guild_id.get(), integration_id.get()))
+            .await;
+        self.guild_integrations
+            .remove(guild_id.get(), integration_id.get())
+            .await;
     }
 }
 
+#[async_trait::async_trait]
 impl UpdateCache for IntegrationCreate {
-    fn update(&self, cache: &InMemoryCache) {
+    async fn update(&self, cache: &InRedisCache) {
         if !cache.wants(ResourceType::INTEGRATION) {
             return;
         }
 
         if let Some(guild_id) = self.guild_id {
-            crate::upsert_guild_item(
-                &cache.integrations,
-                guild_id,
-                (guild_id, self.id),
-                self.0.clone(),
-            );
+            cache
+                .integrations
+                .insert(
+                    (guild_id.get(), self.id.get()),
+                    GuildResource {
+                        guild_id,
+                        value: self.0.clone(),
+                    },
+                )
+                .await;
         }
     }
 }
 
+#[async_trait::async_trait]
 impl UpdateCache for IntegrationDelete {
-    fn update(&self, cache: &InMemoryCache) {
+    async fn update(&self, cache: &InRedisCache) {
         if !cache.wants(ResourceType::INTEGRATION) {
             return;
         }
 
-        cache.delete_integration(self.guild_id, self.id);
+        cache.delete_integration(self.guild_id, self.id).await;
     }
 }
 
+#[async_trait::async_trait]
 impl UpdateCache for IntegrationUpdate {
-    fn update(&self, cache: &InMemoryCache) {
+    async fn update(&self, cache: &InRedisCache) {
         if !cache.wants(ResourceType::INTEGRATION) {
             return;
         }
 
         if let Some(guild_id) = self.guild_id {
-            cache.cache_integration(guild_id, self.0.clone());
+            cache.cache_integration(guild_id, self.0.clone()).await;
         }
     }
 }

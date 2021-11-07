@@ -1,4 +1,4 @@
-use crate::{config::ResourceType, model::CachedPresence, InMemoryCache, UpdateCache};
+use crate::{config::ResourceType, model::CachedPresence, InRedisCache, UpdateCache};
 use twilight_model::{
     gateway::{payload::incoming::PresenceUpdate, presence::UserOrId},
     id::{GuildId, UserId},
@@ -11,25 +11,45 @@ const fn presence_user_id(user_or_id: &UserOrId) -> UserId {
     }
 }
 
-impl InMemoryCache {
-    pub(crate) fn cache_presences(
+impl InRedisCache {
+    pub(crate) async fn cache_presences(
         &self,
         guild_id: GuildId,
         presences: impl IntoIterator<Item = CachedPresence>,
     ) {
+        let mut presences_to_cache = vec![];
+        let mut guild_presences = vec![];
+
         for presence in presences {
-            self.cache_presence(guild_id, presence);
+            guild_presences.push(presence.user_id().get());
+            presences_to_cache.push(((guild_id.get(), presence.user_id().get()), presence));
         }
+
+        self.presences
+            .insert_multiple(
+                // presences
+                //     .into_iter()
+                //     .map(|p| ((guild_id.get(), p.user_id().get()), p))
+                //     .collect(),
+                presences_to_cache,
+            )
+            .await;
+
+        self.guild_presences
+            .insert_multiple(guild_id.get(), guild_presences)
+            .await;
     }
 
-    fn cache_presence(&self, guild_id: GuildId, presence: CachedPresence) {
+    async fn cache_presence(&self, guild_id: GuildId, presence: CachedPresence) {
         self.presences
-            .insert((guild_id, presence.user_id()), presence);
+            .insert((guild_id.get(), presence.user_id().get()), presence)
+            .await;
     }
 }
 
+#[async_trait::async_trait]
 impl UpdateCache for PresenceUpdate {
-    fn update(&self, cache: &InMemoryCache) {
+    async fn update(&self, cache: &InRedisCache) {
         if !cache.wants(ResourceType::PRESENCE) {
             return;
         }
@@ -42,6 +62,6 @@ impl UpdateCache for PresenceUpdate {
             user_id: presence_user_id(&self.user),
         };
 
-        cache.cache_presence(self.guild_id, presence);
+        cache.cache_presence(self.guild_id, presence).await;
     }
 }

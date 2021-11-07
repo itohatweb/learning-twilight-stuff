@@ -24,7 +24,7 @@ impl InRedisCache {
         }
 
         if self.wants(ResourceType::MEMBER) {
-            // self.cache_members(guild.id, guild.members).await;
+            self.cache_members(guild.id, guild.members).await;
         }
 
         if self.wants(ResourceType::PRESENCE) {
@@ -90,7 +90,7 @@ impl InRedisCache {
         self.unavailable_guilds
             .remove("unavailable_guilds".into(), guild.id().get())
             .await;
-        self.guilds.insert(guild.id().get(), &guild).await;
+        self.guilds.insert(guild.id().get(), guild).await;
     }
 }
 
@@ -120,7 +120,7 @@ impl UpdateCache for GuildDelete {
         {
             if let Some(res) = from.get(guild_id).await.ok() {
                 for cid in res {
-                    target.delete(cid).await.ok();
+                    target.delete(cid).await;
                 }
             }
             // if let Some((_, ids)) = guild_map.remove(&guild_id) {
@@ -188,7 +188,7 @@ impl UpdateCache for GuildUpdate {
             return;
         }
 
-        if let Ok(mut guild) = cache.guilds.get(self.0.id.get()).await {
+        if let Some(mut guild) = cache.guilds.get(self.0.id.get()).await {
             guild.afk_channel_id = self.afk_channel_id;
             guild.afk_timeout = self.afk_timeout;
             guild.banner = self.banner.clone();
@@ -216,7 +216,7 @@ impl UpdateCache for GuildUpdate {
             guild.widget_channel_id = self.widget_channel_id;
             guild.widget_enabled = self.widget_enabled;
 
-            cache.guilds.insert(self.0.id.get(), &guild);
+            cache.guilds.insert(self.0.id.get(), guild);
         };
     }
 }

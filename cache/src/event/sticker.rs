@@ -1,6 +1,4 @@
-use crate::{
-    config::ResourceType, model::CachedSticker, GuildResource, InMemoryCache, UpdateCache,
-};
+use crate::{config::ResourceType, model::CachedSticker, GuildResource, InRedisCache, UpdateCache};
 use std::borrow::Cow;
 use twilight_model::{
     channel::message::sticker::{Sticker, StickerId},
@@ -8,9 +6,9 @@ use twilight_model::{
     id::GuildId,
 };
 
-impl InMemoryCache {
-    pub(crate) fn cache_stickers(&self, guild_id: GuildId, stickers: Vec<Sticker>) {
-        if let Some(mut guild_stickers) = self.guild_stickers.get_mut(&guild_id) {
+impl InRedisCache {
+    pub(crate) async fn cache_stickers(&self, guild_id: GuildId, stickers: Vec<Sticker>) {
+        if let Some(guild_stickers) = self.guild_stickers.get(guild_id.get()).await.ok() {
             let incoming: Vec<StickerId> = stickers.iter().map(|s| s.id).collect();
 
             let removal_filter: Vec<StickerId> = guild_stickers
@@ -75,7 +73,7 @@ impl InMemoryCache {
 }
 
 impl UpdateCache for GuildStickersUpdate {
-    fn update(&self, cache: &InMemoryCache) {
+    fn update(&self, cache: &InRedisCache) {
         if !cache.wants(ResourceType::STICKER) {
             return;
         }
