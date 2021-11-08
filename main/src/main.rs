@@ -128,6 +128,7 @@ async fn handle_event(
                 cache.iter().guild_channels().count() + cache.iter().private_channels().count();
             let message_count = cache.iter().messages().count();
             let member_count = cache.iter().members().count();
+            let role_count = cache.iter().roles().count();
             let voice_states_count = cache.iter().voice_states().count();
 
             // use sysinfo::{System, SystemExt};
@@ -148,6 +149,7 @@ async fn handle_event(
             let redis_guilds = redis_cache.guilds.size().await.unwrap();
             let redis_messages = redis_cache.messages.size().await.unwrap();
             let redis_members = redis_cache.members.size().await.unwrap();
+            let redis_roles = redis_cache.roles.size().await.unwrap();
 
             let embed = EmbedBuilder::new()
                 .description("Current statistics of the bot:")
@@ -155,11 +157,12 @@ async fn handle_event(
                     EmbedFieldBuilder::new(
                         "Cached Stuff:",
                         format!(
-                            "guilds: {}\nchannels: {}\nmessages: {}\nmembers: {}\nvoice states: {}",
+                            "guilds: {}\nchannels: {}\nmessages: {}\nmembers: {}\nroles: {}\nvoice states: {}",
                             guild_count,
                             channel_count,
                             message_count,
                             member_count,
+                            role_count,
                             voice_states_count
                         ),
                     )
@@ -169,8 +172,8 @@ async fn handle_event(
                     EmbedFieldBuilder::new(
                         "Redis cache:",
                         format!(
-                            "guilds: {}\nchannels: {}\nmessages: {}\nmembers: {}",
-                            redis_guilds, redis_channels, redis_messages, redis_members
+                            "guilds: {}\nchannels: {}\nmessages: {}\nmembers: {}\nroles: {}",
+                            redis_guilds, redis_channels, redis_messages, redis_members, redis_roles
                         ),
                     )
                     .inline(),
