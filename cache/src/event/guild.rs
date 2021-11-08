@@ -20,7 +20,7 @@ impl InRedisCache {
         }
 
         if self.wants(ResourceType::EMOJI) {
-            // self.cache_emojis(guild.id, guild.emojis).await;
+            self.cache_emojis(guild.id, guild.emojis).await;
         }
 
         if self.wants(ResourceType::MEMBER) {
@@ -28,14 +28,15 @@ impl InRedisCache {
         }
 
         if self.wants(ResourceType::PRESENCE) {
-            // self.cache_presences(
-            //     guild.id,
-            //     guild.presences.into_iter().map(CachedPresence::from).await,
-            // );
+            self.cache_presences(
+                guild.id,
+                guild.presences.into_iter().map(CachedPresence::from),
+            )
+            .await;
         }
 
         if self.wants(ResourceType::ROLE) {
-            // self.cache_roles(guild.id, guild.roles).await;
+            self.cache_roles(guild.id, guild.roles).await;
         }
 
         if self.wants(ResourceType::STICKER) {
@@ -47,7 +48,8 @@ impl InRedisCache {
         }
 
         if self.wants(ResourceType::STAGE_INSTANCE) {
-            // self.cache_stage_instances(guild.id, guild.stage_instances).await;
+            self.cache_stage_instances(guild.id, guild.stage_instances)
+                .await;
         }
 
         let guild = CachedGuild {
