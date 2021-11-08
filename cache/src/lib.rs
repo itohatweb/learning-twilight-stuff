@@ -490,7 +490,7 @@ impl UpdateCache for Event {
             IntegrationDelete(v) => c.update(v.deref()).await,
             IntegrationUpdate(v) => c.update(v.deref()).await,
             // INTERACTION
-            // InteractionCreate(v) => c.update(v.deref()).await,
+            InteractionCreate(v) => c.update(v.deref()).await,
             InviteCreate(_) => {}
             InviteDelete(_) => {}
             MemberAdd(v) => c.update(v.deref()).await,
@@ -501,7 +501,7 @@ impl UpdateCache for Event {
             MessageDelete(v) => c.update(v).await,
             MessageDeleteBulk(v) => c.update(v).await,
             MessageUpdate(v) => c.update(v.deref()).await,
-            // PresenceUpdate(v) => c.update(v.deref()).await,
+            PresenceUpdate(v) => c.update(v.deref()).await,
             PresencesReplace => {}
             ReactionAdd(v) => c.update(v.deref()).await,
             ReactionRemove(v) => c.update(v.deref()).await,
@@ -509,9 +509,9 @@ impl UpdateCache for Event {
             ReactionRemoveEmoji(v) => c.update(v).await,
             // Ready(v) => c.update(v.deref()).await,
             Resumed => {}
-            // RoleCreate(v) => c.update(v).await,
-            // RoleDelete(v) => c.update(v).await,
-            // RoleUpdate(v) => c.update(v).await,
+            RoleCreate(v) => c.update(v).await,
+            RoleDelete(v) => c.update(v).await,
+            RoleUpdate(v) => c.update(v).await,
             ShardConnected(_) => {}
             ShardConnecting(_) => {}
             ShardDisconnected(_) => {}
@@ -519,13 +519,13 @@ impl UpdateCache for Event {
             ShardReconnecting(_) => {}
             ShardPayload(_) => {}
             ShardResuming(_) => {}
-            // StageInstanceCreate(v) => c.update(v).await,
-            // StageInstanceDelete(v) => c.update(v).await,
-            // StageInstanceUpdate(v) => c.update(v).await,
-            // ThreadCreate(v) => c.update(v).await,
-            // ThreadUpdate(v) => c.update(v).await,
-            // ThreadDelete(v) => c.update(v).await,
-            // ThreadListSync(v) => c.update(v).await,
+            StageInstanceCreate(v) => c.update(v).await,
+            StageInstanceDelete(v) => c.update(v).await,
+            StageInstanceUpdate(v) => c.update(v).await,
+            ThreadCreate(v) => c.update(v).await,
+            ThreadUpdate(v) => c.update(v).await,
+            ThreadDelete(v) => c.update(v).await,
+            ThreadListSync(v) => c.update(v).await,
             ThreadMemberUpdate(_) => {}
             ThreadMembersUpdate(_) => {}
             TypingStart(_) => {}
