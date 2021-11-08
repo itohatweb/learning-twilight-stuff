@@ -18,9 +18,9 @@ mod presence;
 mod reaction;
 mod role;
 mod stage_instance;
-mod sticker;
+// mod sticker;
 mod thread;
-mod voice_state;
+// mod voice_state;
 
 impl InRedisCache {
     // TODO: cache
