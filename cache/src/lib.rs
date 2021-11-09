@@ -76,7 +76,7 @@ impl RedisPool {
     pub fn new(connection_str: &str) -> Self {
         let client = redis::Client::open(connection_str).unwrap();
         let manager = RedisConnectionManager::new(client);
-        let pool = Pool::builder().max_open(500).build(manager);
+        let pool = Pool::builder().max_open(200).build(manager);
 
         Self(pool)
     }
@@ -95,7 +95,7 @@ where
     V: DeserializeOwned + Serialize,
 {
     name: String,
-    pool: Arc<RedisPool>,
+    pool: Pool<RedisConnectionManager>,
     key_type: std::marker::PhantomData<K>,
     value_type: std::marker::PhantomData<V>,
 }
@@ -105,10 +105,14 @@ where
     K: DeserializeOwned + Serialize,
     V: DeserializeOwned + Serialize,
 {
-    pub fn new(pool: Arc<RedisPool>, map_name: String) -> RedisHashMapCache<K, V> {
+    pub fn new(connection_str: &str, map_name: String) -> RedisHashMapCache<K, V> {
         // let client = redis::Client::open(connection_str).unwrap();
         // let manager = RedisConnectionManager::new(client);
         // let pool = Pool::builder().max_open(50).build(manager);
+
+        let client = redis::Client::open(connection_str).unwrap();
+        let manager = RedisConnectionManager::new(client);
+        let pool = Pool::builder().max_open(50).build(manager);
 
         Self {
             name: map_name,
@@ -207,7 +211,11 @@ where
     }
 
     async fn get_con(&self) -> Option<Connection<RedisConnectionManager>> {
-        self.pool.get_con().await
+        // self.pool.get_con().await
+        match self.pool.get().await {
+            Ok(con) => Some(con),
+            Err(_) => None,
+        }
     }
 
     fn to_vec<T: Serialize + ?Sized>(&self, val: &T) -> Option<Vec<u8>> {
@@ -221,7 +229,7 @@ where
     V: DeserializeOwned + Serialize,
 {
     prefix: String,
-    pool: Arc<RedisPool>,
+    pool: Pool<RedisConnectionManager>,
     key_type: std::marker::PhantomData<K>,
     value_type: std::marker::PhantomData<V>,
 }
@@ -231,10 +239,10 @@ where
     K: std::fmt::Display + std::marker::Sync + std::marker::Send,
     V: DeserializeOwned + Serialize,
 {
-    pub fn new(pool: Arc<RedisPool>, prefix: String) -> RedisSetCache<K, V> {
-        // let client = redis::Client::open(connection_str).unwrap();
-        // let manager = RedisConnectionManager::new(client);
-        // let pool = Pool::builder().max_open(50).build(manager);
+    pub fn new(connection_str: &str, prefix: String) -> RedisSetCache<K, V> {
+        let client = redis::Client::open(connection_str).unwrap();
+        let manager = RedisConnectionManager::new(client);
+        let pool = Pool::builder().max_open(50).build(manager);
 
         Self {
             prefix,
@@ -321,7 +329,12 @@ where
     }
 
     async fn get_con(&self) -> Result<Connection<RedisConnectionManager>, CacheError> {
-        Ok(self.pool.get_con().await.unwrap())
+        // Ok(self.pool.get_con().await.unwrap())
+        // match self.pool.get().await {
+        //     Ok(con) => Some(con),
+        //     Err(_) => None,
+        // }
+        Ok(self.pool.get().await.unwrap())
     }
 
     fn get_key(&self, key: K) -> String {
@@ -403,37 +416,55 @@ impl InRedisCache {
         let mut config = Config::new();
         config.resource_types = ResourceType::all();
 
-        let pool = Arc::new(RedisPool::new("redis://127.0.0.1"));
+        // let pool = Arc::new(RedisPool::new("redis://127.0.0.1"));
 
         Self {
             config,
-            channels_guild: RedisHashMapCache::new(pool.clone(), "channels_guild".into()),
-            channels_private: RedisHashMapCache::new(pool.clone(), "channels_private".into()),
-            emojis: RedisHashMapCache::new(pool.clone(), "emojis".into()),
-            groups: RedisHashMapCache::new(pool.clone(), "groups".into()),
-            guilds: RedisHashMapCache::new(pool.clone(), "guilds".into()),
-            integrations: RedisHashMapCache::new(pool.clone(), "integrations".into()),
-            members: RedisHashMapCache::new(pool.clone(), "members".into()),
-            messages: RedisHashMapCache::new(pool.clone(), "messages".into()),
-            presences: RedisHashMapCache::new(pool.clone(), "presences".into()),
-            roles: RedisHashMapCache::new(pool.clone(), "roles".into()),
-            stage_instances: RedisHashMapCache::new(pool.clone(), "stage_instances".into()),
-            stickers: RedisHashMapCache::new(pool.clone(), "stickers".into()),
-            users: RedisHashMapCache::new(pool.clone(), "users".into()),
-            voice_states: RedisHashMapCache::new(pool.clone(), "voice_states".into()),
-            channel_messages: RedisSetCache::new(pool.clone(), "channel_messages".into()),
-            guild_channels: RedisSetCache::new(pool.clone(), "guild_channels".into()),
-            guild_emojis: RedisSetCache::new(pool.clone(), "guild_emojis".into()),
-            guild_integrations: RedisSetCache::new(pool.clone(), "guild_integrations".into()),
-            guild_members: RedisSetCache::new(pool.clone(), "guild_members".into()),
-            guild_presences: RedisSetCache::new(pool.clone(), "guild_presences".into()),
-            guild_roles: RedisSetCache::new(pool.clone(), "guild_roles".into()),
-            guild_stage_instances: RedisSetCache::new(pool.clone(), "guild_stage_instances".into()),
-            guild_stickers: RedisSetCache::new(pool.clone(), "guild_stickers".into()),
-            unavailable_guilds: RedisSetCache::new(pool.clone(), "unavailable_guilds".into()),
-            user_guilds: RedisSetCache::new(pool.clone(), "user_guilds".into()),
-            voice_state_channels: RedisSetCache::new(pool.clone(), "voice_state_channels".into()),
-            voice_state_guilds: RedisSetCache::new(pool.clone(), "voice_state_guilds".into()),
+            channels_guild: RedisHashMapCache::new("redis://127.0.0.1", "channels_guild".into()),
+            channels_private: RedisHashMapCache::new(
+                "redis://127.0.0.1",
+                "channels_private".into(),
+            ),
+            emojis: RedisHashMapCache::new("redis://127.0.0.1", "emojis".into()),
+            groups: RedisHashMapCache::new("redis://127.0.0.1", "groups".into()),
+            guilds: RedisHashMapCache::new("redis://127.0.0.1", "guilds".into()),
+            integrations: RedisHashMapCache::new("redis://127.0.0.1", "integrations".into()),
+            members: RedisHashMapCache::new("redis://127.0.0.1", "members".into()),
+            messages: RedisHashMapCache::new("redis://127.0.0.1", "messages".into()),
+            presences: RedisHashMapCache::new("redis://127.0.0.1", "presences".into()),
+            roles: RedisHashMapCache::new("redis://127.0.0.1", "roles".into()),
+            stage_instances: RedisHashMapCache::new("redis://127.0.0.1", "stage_instances".into()),
+            stickers: RedisHashMapCache::new("redis://127.0.0.1", "stickers".into()),
+            users: RedisHashMapCache::new("redis://127.0.0.1", "users".into()),
+            voice_states: RedisHashMapCache::new("redis://127.0.0.1", "voice_states".into()),
+            channel_messages: RedisSetCache::new("redis://127.0.0.1", "channel_messages".into()),
+            guild_channels: RedisSetCache::new("redis://127.0.0.1", "guild_channels".into()),
+            guild_emojis: RedisSetCache::new("redis://127.0.0.1", "guild_emojis".into()),
+            guild_integrations: RedisSetCache::new(
+                "redis://127.0.0.1",
+                "guild_integrations".into(),
+            ),
+            guild_members: RedisSetCache::new("redis://127.0.0.1", "guild_members".into()),
+            guild_presences: RedisSetCache::new("redis://127.0.0.1", "guild_presences".into()),
+            guild_roles: RedisSetCache::new("redis://127.0.0.1", "guild_roles".into()),
+            guild_stage_instances: RedisSetCache::new(
+                "redis://127.0.0.1",
+                "guild_stage_instances".into(),
+            ),
+            guild_stickers: RedisSetCache::new("redis://127.0.0.1", "guild_stickers".into()),
+            unavailable_guilds: RedisSetCache::new(
+                "redis://127.0.0.1",
+                "unavailable_guilds".into(),
+            ),
+            user_guilds: RedisSetCache::new("redis://127.0.0.1", "user_guilds".into()),
+            voice_state_channels: RedisSetCache::new(
+                "redis://127.0.0.1",
+                "voice_state_channels".into(),
+            ),
+            voice_state_guilds: RedisSetCache::new(
+                "redis://127.0.0.1",
+                "voice_state_guilds".into(),
+            ),
         }
     }
 
