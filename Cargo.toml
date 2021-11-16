@@ -1,2 +1,2 @@
 [workspace]
-members = ["main", "util", "cache", "in_memory"]
+members = ["main", "util", "cache"]
