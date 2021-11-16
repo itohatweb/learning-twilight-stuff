@@ -36,6 +36,8 @@ jobs:
 
       - name: Run Codespell
         uses: codespell-project/actions-codespell@master
+        with:
+          ignore_words_list: crate
 
   rustfmt:
     name: Format
