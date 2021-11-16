@@ -110,7 +110,7 @@ impl UpdateCache for GuildCreate {
 #[async_trait::async_trait]
 impl UpdateCache for GuildDelete {
     async fn update(&self, cache: &InRedisCache) {
-        // TODO: WHATS THIS
+        // TODO: WHAT'S THIS
         async fn remove_ids<Hv>(
             target: &RedisHashMapCache<u64, Hv>,
             // guild_map: &DashMap<GuildId, HashSet<T>>,
