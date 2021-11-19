@@ -1,11 +1,11 @@
-use std::{ops::Deref, rc::Rc, sync::Arc};
+use std::ops::Deref;
 
 use crate::{config::ResourceType, model::CachedGuild};
 use config::Config;
-use log::{error, info};
+use log::error;
 use mobc_redis::{
     mobc::{Connection, Pool},
-    redis::{self, cmd, AsyncCommands, RedisError, RedisWrite, ToRedisArgs},
+    redis::{self, cmd, AsyncCommands, RedisError},
     RedisConnectionManager,
 };
 use model::{CachedEmoji, CachedMember, CachedMessage, CachedPresence};
@@ -14,7 +14,7 @@ use twilight_model::{
     channel::{message::Sticker, Group, GuildChannel, PrivateChannel, StageInstance},
     gateway::event::Event,
     guild::{GuildIntegration, Role},
-    id::{ChannelId, GuildId},
+    id::GuildId,
     user::User,
     voice::VoiceState,
 };
