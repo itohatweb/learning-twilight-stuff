@@ -17,7 +17,7 @@ pub mod ping;
 pub enum ExecCommandError {
     #[error("The requested command `{0}` could not be found.")]
     CommandNotFound(String),
-    #[error("Error occured whilst sending a request: {0}")]
+    #[error("Error occurred whilst sending a request: {0}")]
     HttpError(#[from] twilight_http::Error),
 
     #[error(transparent)]
@@ -43,7 +43,7 @@ pub async fn exec(context: Context, command: &ApplicationCommand) -> Result<(), 
                         &command.token,
                         &InteractionResponse::ChannelMessageWithSource(
                             CallbackDataBuilder::new()
-                                // TODO: get the subcommand names aswell
+                                // TODO: get the subcommand names as well
                                 .content(format!(
                                     "The requested command `{}` could not be found.",
                                     msg
