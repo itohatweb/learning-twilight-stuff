@@ -21,6 +21,7 @@ twilight-embed-builder = "0.7.1"
 # Others
 futures = "0.3.17"
 tokio = { version = "1.12.0", features = ["full"] }
+async-trait = "0.1.51"
 
 redis = { version = "0.21.3", features = [
     "aio",
