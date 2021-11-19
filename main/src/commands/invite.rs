@@ -1,4 +1,3 @@
-use anyhow::Result;
 use twilight_model::{
     application::{
         callback::InteractionResponse, component::button::ButtonStyle,
@@ -10,9 +9,11 @@ use twilight_model::{
 use twilight_util::builder::CallbackDataBuilder;
 use util::builder::{ButtonBuilder, ComponentBuilder, SelectMenuBuilder, SelectMenuOptionBuilder};
 
-use crate::types::TwHttpClient;
+use crate::types::Context;
 
-pub async fn execute(http: TwHttpClient, command: &ApplicationCommand) -> Result<()> {
+use super::ExecCommandError;
+
+pub async fn run(context: &Context, command: &ApplicationCommand) -> Result<(), ExecCommandError> {
     // let component = Component::ActionRow(ActionRow {
     //     components: Vec::from([Component::Button(Button {
     //         style: ButtonStyle::Primary,
@@ -107,7 +108,8 @@ pub async fn execute(http: TwHttpClient, command: &ApplicationCommand) -> Result
         // })
         .build();
 
-    let _f = http
+    let _f = context
+        .http
         .interaction_callback(
             command.id,
             &command.token,
