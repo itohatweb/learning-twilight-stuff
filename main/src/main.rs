@@ -7,7 +7,11 @@ use futures::stream::StreamExt;
 use std::{env, error::Error, sync::Arc};
 use twilight_cache_inmemory::ResourceType;
 use twilight_gateway::cluster::{Cluster, ShardScheme};
-use twilight_model::{gateway::Intents, id::ApplicationId};
+use twilight_interactions::command::{self, CommandModel, CreateCommand, ResolvedUser};
+use twilight_model::{
+    gateway::Intents,
+    id::{ApplicationId, GuildId},
+};
 
 use crate::types::InnerContext;
 
@@ -86,6 +90,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         token,
         application_id,
         ResourceType::all(),
+        cluster.clone(),
     ));
 
     // Process each event as they come in.

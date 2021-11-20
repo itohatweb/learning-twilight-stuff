@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use twilight_cache_inmemory::{InMemoryCache, ResourceType};
+use twilight_gateway::Cluster;
 use twilight_http::Client as HttpClient;
 use twilight_model::application::command::Command as ApplicationCommand;
 use twilight_model::{application::command::CommandOption, id::ApplicationId};
@@ -13,6 +14,7 @@ pub struct InnerContext {
     pub http: HttpClient,
     pub inter: InteractionResponder,
     pub cache: InMemoryCache,
+    pub cluster: Arc<Cluster>,
 }
 
 impl InnerContext {
@@ -20,9 +22,11 @@ impl InnerContext {
         token: String,
         application_id: ApplicationId,
         cache_resource_types: ResourceType,
+        cluster: Arc<Cluster>,
     ) -> Self {
         // HTTP is separate from the gateway, so create a new client.
         let http = HttpClient::new(token.clone());
+        http.set_application_id(application_id);
 
         // TODO: Interaction HTTP handler
         let http_inter = HttpClient::new(token);
@@ -34,7 +38,12 @@ impl InnerContext {
             .resource_types(cache_resource_types)
             .build();
 
-        Self { http, inter, cache }
+        Self {
+            http,
+            inter,
+            cache,
+            cluster,
+        }
     }
 }
 
