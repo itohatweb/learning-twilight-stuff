@@ -15,8 +15,15 @@ twilight-cache-inmemory = "0.7.0"
 twilight-gateway = "0.7.0"
 twilight-http = "0.7.0"
 twilight-model = "0.7.0"
-twilight-util = { version = "0.7.0", features = ["builder", "snowflake"] }
+twilight-util = { version = "0.7.0", features = [
+    "builder",
+    "snowflake",
+    "link",
+] }
 twilight-embed-builder = "0.7.1"
+
+# Third Party crates for twilight
+twilight-interactions = "0.7"
 
 # Others
 futures = "0.3.17"

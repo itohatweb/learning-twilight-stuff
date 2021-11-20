@@ -120,6 +120,7 @@ dependencies = [
  "twilight-embed-builder",
  "twilight-gateway",
  "twilight-http",
+ "twilight-interactions",
  "twilight-model",
  "twilight-util",
  "util",
@@ -1573,6 +1574,27 @@ dependencies = [
  "serde_json",
  "tokio",
  "twilight-model",
+]
+
+[[package]]
+name = "twilight-interactions"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "074e26ff7f394b752bc1486a0c4df4be3625dcaa2a1acee17e321acb785015f4"
+dependencies = [
+ "twilight-interactions-derive",
+ "twilight-model",
+]
+
+[[package]]
+name = "twilight-interactions-derive"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd1467dfc71b3425229b80dcabcd74fbc52869115a19ad0ab97942fe24f6bd6c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
