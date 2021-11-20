@@ -10,6 +10,7 @@ use twilight_util::builder::CallbackDataBuilder;
 use crate::types::Context;
 
 // Make every command a mod
+pub mod avatar;
 pub mod invite;
 pub mod ping;
 
@@ -28,6 +29,7 @@ pub async fn exec(context: Context, command: &ApplicationCommand) -> Result<(), 
     let result = match command.data.name.as_str() {
         "invite" => invite::run(&context, command).await,
         "ping" => ping::run(&context, command).await,
+        "avatar" => avatar::run(&context, command).await,
         // _ => bail!("unknown command: {:?}", command),
         cn => Err(ExecCommandError::CommandNotFound(cn.into())),
     };
