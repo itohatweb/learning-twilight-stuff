@@ -78,3 +78,16 @@ pub async fn run(context: &Context, command: &ApplicationCommand) -> Result<(), 
 
     Ok(())
 }
+
+pub fn build() -> Command {
+    CommandBuilder::new(
+        "avatar".to_string(),
+        "🖼️ Show the avatar of a user or yourself.".to_string(),
+        CommandType::ChatInput,
+    )
+    .option(UserBuilder::new(
+        "user".to_string(),
+        "Provide @user to view their avatar.".to_string(),
+    ))
+    .build()
+}
