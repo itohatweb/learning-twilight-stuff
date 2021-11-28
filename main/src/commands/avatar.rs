@@ -52,7 +52,6 @@ pub async fn run(context: &Context, command: &ApplicationCommand) -> Result<(), 
             &command.token,
             &InteractionResponse::ChannelMessageWithSource(
                 CallbackDataBuilder::new()
-                    // .components([component])
                     .embeds(vec![EmbedBuilder::new()
                         .title("Avatar Link")
                         .url(user.avatar_url().set_size(1024).build())
