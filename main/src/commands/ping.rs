@@ -1,5 +1,7 @@
 use twilight_embed_builder::{EmbedBuilder, EmbedFooterBuilder, ImageSource};
+use twilight_model::application::command::{Command, CommandType};
 use twilight_model::application::{callback::InteractionResponse, interaction::ApplicationCommand};
+use twilight_util::builder::command::CommandBuilder;
 use twilight_util::builder::CallbackDataBuilder;
 use twilight_util::snowflake::Snowflake;
 use util::interaction::ApplicationCommandUtils;
@@ -36,7 +38,7 @@ pub async fn run(context: &Context, command: &ApplicationCommand) -> Result<(), 
             command.id,
             &command.token,
             &InteractionResponse::ChannelMessageWithSource(
-                CallbackDataBuilder::new().content(format!("🏓")).build(),
+                CallbackDataBuilder::new().content("🏓".into()).build(),
             ),
         )
         .await
@@ -144,7 +146,7 @@ pub async fn run(context: &Context, command: &ApplicationCommand) -> Result<(), 
             command.id,
             &command.token,
             &InteractionResponse::ChannelMessageWithSource(
-                CallbackDataBuilder::new().content(format!("blub")).build(),
+                CallbackDataBuilder::new().content("blub".into()).build(),
             ),
         )
         .await
