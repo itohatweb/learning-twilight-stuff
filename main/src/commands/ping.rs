@@ -154,3 +154,12 @@ pub async fn run(context: &Context, command: &ApplicationCommand) -> Result<(), 
 
     Ok(())
 }
+
+pub fn build() -> Command {
+    CommandBuilder::new(
+        "ping".to_string(),
+        "🏓 Check whether the bot is online and responsive.".to_string(),
+        CommandType::ChatInput,
+    )
+    .build()
+}
