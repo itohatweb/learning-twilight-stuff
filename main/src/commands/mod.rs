@@ -1,9 +1,11 @@
 use anyhow::Result;
 
 use log::error;
+use twilight_http::Client;
 use twilight_model::{
     application::{callback::InteractionResponse, interaction::ApplicationCommand},
     channel::message::MessageFlags,
+    id::GuildId,
 };
 use twilight_util::builder::CallbackDataBuilder;
 
@@ -20,6 +22,10 @@ pub enum ExecCommandError {
     CommandNotFound(String),
     #[error("Error occurred whilst sending a request: {0}")]
     HttpError(#[from] twilight_http::Error),
+
+    /// Use this to automatically send an EPHEMERAL message to the executor.
+    #[error("Something went wrong: {0}")]
+    Message(String),
 
     #[error(transparent)]
     Other(#[from] anyhow::Error),
@@ -50,6 +56,22 @@ pub async fn exec(context: Context, command: &ApplicationCommand) -> Result<(), 
                                     "The requested command `{}` could not be found.",
                                     msg
                                 ))
+                                .flags(MessageFlags::EPHEMERAL)
+                                .build(),
+                        ),
+                    )
+                    .exec()
+                    .await?;
+            }
+            Message(msg) => {
+                context
+                    .http
+                    .interaction_callback(
+                        command.id,
+                        &command.token,
+                        &InteractionResponse::ChannelMessageWithSource(
+                            CallbackDataBuilder::new()
+                                .content(msg.into())
                                 .flags(MessageFlags::EPHEMERAL)
                                 .build(),
                         ),
