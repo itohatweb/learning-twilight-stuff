@@ -141,3 +141,12 @@ pub async fn run(context: &Context, command: &ApplicationCommand) -> Result<(), 
 
     Ok(())
 }
+
+pub fn build() -> Command {
+    CommandBuilder::new(
+        "invite".to_string(),
+        "🔗 Get the invite link for the bot.".to_string(),
+        CommandType::ChatInput,
+    )
+    .build()
+}
