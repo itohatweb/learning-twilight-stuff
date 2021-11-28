@@ -1,12 +1,13 @@
 use twilight_model::{
     application::{
-        callback::InteractionResponse, component::button::ButtonStyle,
+        callback::InteractionResponse,
+        command::{Command, CommandType},
         interaction::ApplicationCommand,
     },
     channel::ReactionType,
     id::EmojiId,
 };
-use twilight_util::builder::CallbackDataBuilder;
+use twilight_util::builder::{command::CommandBuilder, CallbackDataBuilder};
 use util::builder::{ButtonBuilder, ComponentBuilder, SelectMenuBuilder, SelectMenuOptionBuilder};
 
 use crate::types::Context;
@@ -26,55 +27,61 @@ pub async fn run(context: &Context, command: &ApplicationCommand) -> Result<(), 
     // });
     let new = ComponentBuilder::new()
         .button(
-            ButtonBuilder::new(ButtonStyle::Success, "nicue".into())
+            ButtonBuilder::success("nicue".into())
                 .emoji(ReactionType::Custom {
                     animated: false,
                     id: EmojiId::new(806599468504973332_u64).unwrap(),
                     name: None,
                 })
                 .label("fooo".into())
-                .build(),
+                .build()
+                .unwrap(),
         )
         .button(
-            ButtonBuilder::new(ButtonStyle::Link, "https://itoh.at/web".into())
+            ButtonBuilder::link("https://itoh.at/web".into())
                 .emoji(ReactionType::Custom {
                     animated: false,
                     id: EmojiId::new(862112047558950912_u64).unwrap(),
                     name: Some("blurple_link".into()),
                 })
                 .label("linkedi link".into())
-                .build(),
+                .build()
+                .unwrap(),
         )
         .button(
-            ButtonBuilder::new(ButtonStyle::Secondary, "work".into())
+            ButtonBuilder::secondary("work".into())
                 .emoji(ReactionType::Custom {
                     animated: false,
                     id: EmojiId::new(855134248603353098_u64).unwrap(),
                     name: None,
                 })
                 .disabled(true)
-                .build(),
+                .build()
+                .unwrap(),
         )
         .select_menu(
             SelectMenuBuilder::new("testing menu".into())
                 .add_options(vec![
-                    SelectMenuOptionBuilder::new("Lab 1".into(), "lab-1".into())
-                        .description(Some("optional description".into()))
-                        .build(),
-                    SelectMenuOptionBuilder::new("Lab 2".into(), "lab-2".into())
+                    SelectMenuOptionBuilder::new("lab-1".into(), "Lab 1".into())
+                        .description("".into())
+                        .build()
+                        .unwrap(),
+                    SelectMenuOptionBuilder::new("lab-2".into(), "Lab 2".into())
                         .emoji(ReactionType::Custom {
                             animated: true,
                             id: EmojiId::new(798140081713184798_u64).unwrap(),
                             name: Some("KEK".into()),
                         })
-                        .build(),
+                        .build()
+                        .unwrap(),
                 ])
                 .build(),
         )
         .button(
-            ButtonBuilder::new(ButtonStyle::Success, "idk what this is".into())
+            ButtonBuilder::success("idk what this is".into())
                 .label("baz".into())
-                .build(),
+                .build()
+                .unwrap(),
         )
         // .select_menu(SelectMenu {
         //     custom_id: "test custom id 2asdfasdf".into(),
