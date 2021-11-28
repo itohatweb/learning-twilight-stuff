@@ -93,6 +93,10 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         cluster.clone(),
     ));
 
+    if false {
+        commands::set_dev_commands(&context.http).await?;
+    }
+
     // Process each event as they come in.
     while let Some((shard_id, event)) = events.next().await {
         // Update the cache with the event.

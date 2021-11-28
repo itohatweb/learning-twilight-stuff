@@ -113,3 +113,14 @@ pub async fn exec(context: Context, command: &ApplicationCommand) -> Result<(), 
 
     Ok(())
 }
+
+pub async fn set_dev_commands(http: &Client) -> Result<()> {
+    http.set_guild_commands(
+        GuildId::new(830362255890710538).unwrap(),
+        &[ping::build(), invite::build(), avatar::build()],
+    )?
+    .exec()
+    .await?;
+
+    Ok(())
+}
