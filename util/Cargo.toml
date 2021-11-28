@@ -10,8 +10,12 @@ edition = "2021"
 twilight-model = "0.7.1"
 twilight-http = "0.7.1"
 twilight-util = { version = "0.7.0", features = ["builder"] }
+twilight-embed-builder = "0.7.1"
 
 # THREAD SAVE HASHMAP AND HASHSET
 dashmap = "4.0.2"
 
 log = "0.4.14"
+
+[dev-dependencies]
+static_assertions = { default-features = false, version = "1" }
