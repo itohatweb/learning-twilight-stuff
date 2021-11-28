@@ -12,9 +12,10 @@ use twilight_util::builder::CallbackDataBuilder;
 use crate::types::Context;
 
 // Make every command a mod
-pub mod avatar;
-pub mod invite;
-pub mod ping;
+mod avatar;
+mod invite;
+mod ping;
+mod test;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ExecCommandError {
@@ -29,6 +30,9 @@ pub enum ExecCommandError {
 
     #[error(transparent)]
     Other(#[from] anyhow::Error),
+
+    #[error("an unknown error ocurred: {0}")]
+    Unknown(#[from] Box<dyn std::error::Error + Send + Sync>),
 }
 
 pub async fn exec(context: Context, command: &ApplicationCommand) -> Result<(), ExecCommandError> {
@@ -36,6 +40,7 @@ pub async fn exec(context: Context, command: &ApplicationCommand) -> Result<(), 
         "invite" => invite::run(&context, command).await,
         "ping" => ping::run(&context, command).await,
         "avatar" => avatar::run(&context, command).await,
+        "test" => test::run(&context, command).await,
         // _ => bail!("unknown command: {:?}", command),
         cn => Err(ExecCommandError::CommandNotFound(cn.into())),
     };
@@ -117,7 +122,12 @@ pub async fn exec(context: Context, command: &ApplicationCommand) -> Result<(), 
 pub async fn set_dev_commands(http: &Client) -> Result<()> {
     http.set_guild_commands(
         GuildId::new(830362255890710538).unwrap(),
-        &[ping::build(), invite::build(), avatar::build()],
+        &[
+            test::build(),
+            ping::build(),
+            invite::build(),
+            avatar::build(),
+        ],
     )?
     .exec()
     .await?;
