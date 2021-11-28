@@ -7,11 +7,7 @@ use futures::stream::StreamExt;
 use std::{env, error::Error, sync::Arc};
 use twilight_cache_inmemory::ResourceType;
 use twilight_gateway::cluster::{Cluster, ShardScheme};
-use twilight_interactions::command::{self, CommandModel, CreateCommand, ResolvedUser};
-use twilight_model::{
-    gateway::Intents,
-    id::{ApplicationId, GuildId},
-};
+use twilight_model::{gateway::Intents, id::ApplicationId};
 
 use crate::types::InnerContext;
 
