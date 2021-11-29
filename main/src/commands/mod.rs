@@ -41,7 +41,6 @@ pub async fn exec(context: Context, command: &ApplicationCommand) -> Result<(), 
         "ping" => ping::run(&context, command).await,
         "avatar" => avatar::run(&context, command).await,
         "test" => test::run(&context, command).await,
-        // _ => bail!("unknown command: {:?}", command),
         cn => Err(ExecCommandError::CommandNotFound(cn.into())),
     };
 
